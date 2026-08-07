@@ -4,13 +4,13 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppShell } from './components/AppShell'
 import { Connexion } from './pages/Connexion'
 import { AccueilPage } from './pages/Accueil/AccueilPage'
-import { PagePlaceholder } from './pages/PagePlaceholder'
 import { ParametresPage } from './pages/Parametres/ParametresPage'
 import { MaSemaine } from './pages/MaSemaine'
 import { VentesPage } from './pages/Ventes/VentesPage'
 import { PlanActionPage } from './pages/PlanAction/PlanActionPage'
 import { RessourcesPage } from './pages/Ressources/RessourcesPage'
 import { AgenceDetailAdmin } from './pages/Accueil/AgenceDetailAdmin'
+import { AuditPage } from './pages/Audit/AuditPage'
 
 function App() {
   return (
@@ -43,10 +43,7 @@ function App() {
             <Route element={<ProtectedRoute rolesAutorises={['admin']} />}>
               <Route element={<AppShell />}>
                 <Route path="/agence/:agenceId" element={<AgenceDetailAdmin />} />
-                <Route
-                  path="/audit"
-                  element={<PagePlaceholder titre="Audit" description="À venir." />}
-                />
+                <Route path="/audit" element={<AuditPage />} />
               </Route>
             </Route>
           </Route>

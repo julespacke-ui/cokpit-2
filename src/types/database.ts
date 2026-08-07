@@ -179,8 +179,11 @@ export interface Ressource {
 
 export interface Audit {
   id: string
-  agence_id: string
+  /** Null tant que le prospect n'est pas devenu client (cf. migration 0005). */
+  agence_id: string | null
+  /** Nom libre, utilisé quand l'audit porte sur un prospect sans agence. */
+  nom_prospect: string | null
   date: string
-  reponses: Record<string, unknown>
+  reponses: Record<string, string | number>
   created_at: string
 }
