@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Agence, Profile } from '../types/database'
@@ -27,6 +27,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [agence, setAgence] = useState<Agence | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Miroir du profil lisible depuis le callback d'authentification, dont la
+  // closure ne voit sinon que la valeur initiale de l'état.
+  const profilCharge = useRef<string | null>(null)
+
   async function chargerProfil(userId: string) {
     const { data: profileData } = await supabase
       .from('profiles')
@@ -35,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single()
 
     setProfile(profileData ?? null)
+    profilCharge.current = profileData?.id ?? null
 
     if (profileData?.agence_id) {
       const { data: agenceData } = await supabase
@@ -68,13 +73,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!session) {
         setProfile(null)
         setAgence(null)
+        profilCharge.current = null
         setLoading(false)
         return
       }
 
-      // `loading` reste vrai pendant le chargement du profil : sinon les
-      // routes protégées voient un instant « session valide + profil absent »
-      // et déclenchent une redirection en boucle.
+      // Le profil de cet utilisateur est déjà chargé : l'événement est un
+      // simple rafraîchissement de jeton (retour sur l'onglet, par exemple).
+      // Ne rien remonter — repasser `loading` à vrai démonterait toute
+      // l'interface et ferait perdre une saisie en cours.
+      if (profilCharge.current === session.user.id) return
+
+      // Utilisateur réellement différent (connexion) : `loading` reste vrai
+      // pendant le chargement du profil, sinon les routes protégées voient un
+      // instant « session valide + profil absent » et bouclent en redirection.
       setLoading(true)
 
       // Le chargement est différé hors du callback : interroger Supabase
