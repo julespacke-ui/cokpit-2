@@ -50,6 +50,10 @@ export function PlanActionCommercial() {
     <iframe
       srcDoc={contenuHtml}
       title={plan.titre}
+      // sandbox sans "allow-same-origin" : le fichier s'exécute dans une
+      // origine isolée et ne peut donc pas lire la session de l'utilisateur.
+      // allow-scripts garde les plans d'action interactifs fonctionnels.
+      sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
       className="h-[75vh] w-full rounded-[var(--radius-card)] border border-line"
     />
   )

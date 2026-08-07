@@ -62,20 +62,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      if (session) {
-        // `loading` doit rester vrai pendant le chargement du profil : sinon
-        // les routes protégées voient un instant « session valide + profil
-        // absent » et déclenchent une redirection en boucle.
-        setLoading(true)
-        await chargerProfil(session.user.id)
-        setLoading(false)
-      } else {
+
+      if (!session) {
         setProfile(null)
         setAgence(null)
         setLoading(false)
+        return
       }
+
+      // `loading` reste vrai pendant le chargement du profil : sinon les
+      // routes protégées voient un instant « session valide + profil absent »
+      // et déclenchent une redirection en boucle.
+      setLoading(true)
+
+      // Le chargement est différé hors du callback : interroger Supabase
+      // directement à l'intérieur bloque, car le callback détient un verrou
+      // du client auth dont la requête a elle-même besoin pour son jeton.
+      setTimeout(async () => {
+        if (!actif) return
+        await chargerProfil(session.user.id)
+        setLoading(false)
+      }, 0)
     })
 
     return () => {

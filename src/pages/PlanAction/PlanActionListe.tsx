@@ -95,6 +95,9 @@ export function PlanActionListe({ agenceId }: { agenceId: string }) {
         <iframe
           srcDoc={contenuHtml}
           title="Plan d'action"
+          // cf. PlanActionCommercial : origine isolée, le fichier ne peut pas
+          // accéder à la session de l'utilisateur.
+          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
           className="h-[75vh] w-full rounded-[var(--radius-card)] border border-line"
         />
       ) : (
