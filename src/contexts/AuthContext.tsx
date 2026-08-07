@@ -1,0 +1,107 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import type { Session } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
+import type { Agence, Profile } from '../types/database'
+
+interface AuthState {
+  session: Session | null
+  profile: Profile | null
+  agence: Agence | null
+  loading: boolean
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signOut: () => Promise<void>
+}
+
+const AuthContext = createContext<AuthState | undefined>(undefined)
+
+function traduireErreurConnexion(message: string): string {
+  if (message.includes('Invalid login credentials')) {
+    return 'Email ou mot de passe incorrect.'
+  }
+  return "Une erreur est survenue lors de la connexion."
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [agence, setAgence] = useState<Agence | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  async function chargerProfil(userId: string) {
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    setProfile(profileData ?? null)
+
+    if (profileData?.agence_id) {
+      const { data: agenceData } = await supabase
+        .from('agences')
+        .select('*')
+        .eq('id', profileData.agence_id)
+        .single()
+      setAgence(agenceData ?? null)
+    } else {
+      setAgence(null)
+    }
+  }
+
+  useEffect(() => {
+    let actif = true
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!actif) return
+      setSession(session)
+      if (session) {
+        await chargerProfil(session.user.id)
+      }
+      setLoading(false)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session)
+      if (session) {
+        // `loading` doit rester vrai pendant le chargement du profil : sinon
+        // les routes protégées voient un instant « session valide + profil
+        // absent » et déclenchent une redirection en boucle.
+        setLoading(true)
+        await chargerProfil(session.user.id)
+        setLoading(false)
+      } else {
+        setProfile(null)
+        setAgence(null)
+        setLoading(false)
+      }
+    })
+
+    return () => {
+      actif = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  async function signIn(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return { error: error ? traduireErreurConnexion(error.message) : null }
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut()
+  }
+
+  return (
+    <AuthContext.Provider value={{ session, profile, agence, loading, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth doit être utilisé à l’intérieur de AuthProvider')
+  return ctx
+}

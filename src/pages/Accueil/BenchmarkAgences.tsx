@@ -1,0 +1,166 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../../lib/supabase'
+import {
+  agregerSaisies,
+  calculerPanierVente,
+  chiffreAffaires,
+  honorairesMoyens,
+  panierMoyen,
+  tauxRotation,
+} from '../../lib/calculs'
+import type { Agence, SaisieHebdo } from '../../types/database'
+
+interface VenteAvecRelations {
+  id: string
+  agence_id: string
+  honoraires_reels: number
+  honoraires_preconises: number
+  origine_vente: string
+  avis_laisse: boolean
+  extension_garantie_id: string | null
+  packs_mer: { prix: number } | null
+  extensions_garantie: { prix_client: number } | null
+  vente_services: { prix: number }[]
+}
+
+interface LigneBenchmark {
+  agence: Agence
+  label: string
+  ventes: number
+  ca: number
+  panierMoyen: number
+  honorairesMoyens: number
+  tauxRotation: number
+  mandats: number
+}
+
+interface BenchmarkAgencesProps {
+  du: string
+  au: string
+}
+
+export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
+  const navigate = useNavigate()
+  const [lignes, setLignes] = useState<LigneBenchmark[]>([])
+  const [chargement, setChargement] = useState(true)
+
+  useEffect(() => {
+    setChargement(true)
+
+    Promise.all([
+      supabase.from('agences').select('*').order('nom'),
+      supabase
+        .from('ventes')
+        .select(
+          'id, agence_id, honoraires_reels, honoraires_preconises, origine_vente, avis_laisse, extension_garantie_id, packs_mer(prix), extensions_garantie(prix_client), vente_services(prix)',
+        )
+        .gte('date_vente', du)
+        .lte('date_vente', au),
+      supabase.from('saisies_hebdo').select('*').gte('semaine', du).lte('semaine', au),
+      // Stock début de période : dernier stock connu de chaque commercial avant
+      // le début de la période (même logique/limite que côté gérant, cf.
+      // lib/calculs.ts pour le caveat sur le taux de rotation).
+      supabase
+        .from('saisies_hebdo')
+        .select('commercial_id, agence_id, semaine, stock_total')
+        .lt('semaine', du)
+        .order('semaine', { ascending: false }),
+    ]).then(([agencesRes, ventesRes, saisiesRes, stockRes]) => {
+      const agences = agencesRes.data ?? []
+      const ventes = (ventesRes.data ?? []) as unknown as VenteAvecRelations[]
+      const saisies = (saisiesRes.data ?? []) as SaisieHebdo[]
+
+      const dernierStockParCommercial = new Map<string, { agenceId: string; stockTotal: number }>()
+      for (const s of stockRes.data ?? []) {
+        if (!dernierStockParCommercial.has(s.commercial_id)) {
+          dernierStockParCommercial.set(s.commercial_id, { agenceId: s.agence_id, stockTotal: s.stock_total })
+        }
+      }
+
+      const lignesSansLabel = agences.map((agence) => {
+        const ventesAgence = ventes.filter((v) => v.agence_id === agence.id)
+        const paniers = ventesAgence.map((v) =>
+          calculerPanierVente({
+            honorairesReels: v.honoraires_reels,
+            prixPackMer: v.packs_mer?.prix,
+            prixExtensionGarantie: v.extensions_garantie?.prix_client,
+            services: v.vente_services ?? [],
+          }),
+        )
+        const saisiesAgence = saisies.filter((s) => s.agence_id === agence.id)
+        const agregat = agregerSaisies(saisiesAgence)
+
+        let stockDebut = 0
+        for (const { agenceId, stockTotal } of dernierStockParCommercial.values()) {
+          if (agenceId === agence.id) stockDebut += stockTotal
+        }
+
+        return {
+          agence,
+          ventes: ventesAgence.length,
+          ca: chiffreAffaires(paniers),
+          panierMoyen: panierMoyen(paniers),
+          honorairesMoyens: honorairesMoyens(ventesAgence),
+          tauxRotation: tauxRotation(ventesAgence.length, stockDebut, agregat.stockEntrees),
+          mandats: agregat.mandatsRentres,
+        }
+      })
+
+      // Classement par CA décroissant : la meilleure agence devient "Agence A".
+      lignesSansLabel.sort((a, b) => b.ca - a.ca)
+
+      const lignesCalc: LigneBenchmark[] = lignesSansLabel.map((ligne, index) => ({
+        ...ligne,
+        label: `Agence ${String.fromCharCode(65 + index)}`,
+      }))
+
+      setLignes(lignesCalc)
+      setChargement(false)
+    })
+  }, [du, au])
+
+  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (lignes.length === 0) return <p className="text-text-dim">Aucune agence pour l'instant.</p>
+
+  return (
+    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-bg-elev">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-line text-left text-text-dim">
+            <th className="px-4 py-3 font-normal">Agence</th>
+            <th className="px-4 py-3 text-right font-normal">Ventes</th>
+            <th className="px-4 py-3 text-right font-normal">CA TTC</th>
+            <th className="px-4 py-3 text-right font-normal">Panier moyen</th>
+            <th className="px-4 py-3 text-right font-normal">Honoraires moyens</th>
+            <th className="px-4 py-3 text-right font-normal">Taux de rotation</th>
+            <th className="px-4 py-3 text-right font-normal">Mandats</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lignes.map((ligne) => (
+            <tr
+              key={ligne.agence.id}
+              onClick={() => navigate(`/agence/${ligne.agence.id}`)}
+              className="cursor-pointer border-b border-line last:border-0 hover:bg-bg-elev-2"
+            >
+              <td className="px-4 py-3">
+                {ligne.label} <span className="text-text-faint">({ligne.agence.nom})</span>
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums">{ligne.ventes}</td>
+              <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>
+              <td className="px-4 py-3 text-right tabular-nums">
+                {Math.round(ligne.panierMoyen).toLocaleString('fr-FR')} €
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums">
+                {Math.round(ligne.honorairesMoyens).toLocaleString('fr-FR')} €
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums">{ligne.tauxRotation.toFixed(1)} %</td>
+              <td className="px-4 py-3 text-right tabular-nums">{ligne.mandats}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}

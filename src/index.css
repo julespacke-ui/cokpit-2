@@ -1,0 +1,83 @@
+@import 'tailwindcss';
+
+/* Polices chargées via <link> dans index.html (un @import CSS ici serait
+   invalide : il se retrouve après le CSS généré par `@import 'tailwindcss'`,
+   et un @import qui suit une autre règle est ignoré par le navigateur). */
+
+:root {
+  --bg: #0c0d10;
+  --bg-elev: #15171b;
+  --bg-elev-2: #1c1f24;
+  --line: #2a2d33;
+  --text: #f1f2f4;
+  --text-dim: #9a9ea6;
+  --text-faint: #63676f;
+  --accent-1: #a78bfa; /* violet */
+  --accent-2: #3ecf9e; /* vert — positif, objectifs atteints */
+  --accent-3: #f45b69; /* rouge — alertes, sous objectif */
+  --accent-4: #ff8f6b; /* orange — accent principal, CTA */
+  --accent-5: #58c4dc; /* cyan — infos */
+  --accent-6: #f4c95d; /* jaune — avis */
+  --radius: 14px;
+}
+
+@theme {
+  --color-bg: var(--bg);
+  --color-bg-elev: var(--bg-elev);
+  --color-bg-elev-2: var(--bg-elev-2);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
+  --color-accent-1: var(--accent-1);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --color-accent-4: var(--accent-4);
+  --color-accent-5: var(--accent-5);
+  --color-accent-6: var(--accent-6);
+  --radius-card: var(--radius);
+  --font-heading: 'Syne', sans-serif;
+  --font-sans: 'DM Sans', sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Masque les flèches natives des inputs numériques : sur les champs sans
+   cadre visible (cf. Ma semaine), elles flottent de façon incohérente. */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
