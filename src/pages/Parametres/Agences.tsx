@@ -5,6 +5,73 @@ import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 
+function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => void }) {
+  const [edition, setEdition] = useState(false)
+  const [nom, setNom] = useState(agence.nom)
+  const [ville, setVille] = useState(agence.ville ?? '')
+  const [envoiEnCours, setEnvoiEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  function annuler() {
+    setNom(agence.nom)
+    setVille(agence.ville ?? '')
+    setErreur(null)
+    setEdition(false)
+  }
+
+  async function enregistrer() {
+    setErreur(null)
+    setEnvoiEnCours(true)
+    const { error } = await supabase
+      .from('agences')
+      .update({ nom, ville: ville || null })
+      .eq('id', agence.id)
+    setEnvoiEnCours(false)
+    if (error) {
+      setErreur(error.message)
+      return
+    }
+    setEdition(false)
+    onChange()
+  }
+
+  if (edition) {
+    return (
+      <div className="flex flex-col gap-2 border-b border-line pb-3 last:border-0">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1.5 block text-sm text-text-dim">Nom</label>
+            <Input value={nom} onChange={(e) => setNom(e.target.value)} className="w-56" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm text-text-dim">Ville</label>
+            <Input value={ville} onChange={(e) => setVille(e.target.value)} className="w-40" />
+          </div>
+          <Button onClick={enregistrer} disabled={envoiEnCours}>
+            {envoiEnCours ? 'Enregistrement…' : 'Enregistrer'}
+          </Button>
+          <Button variant="secondary" onClick={annuler} disabled={envoiEnCours}>
+            Annuler
+          </Button>
+        </div>
+        {erreur && <p className="rounded-lg bg-accent-3/15 px-4 py-3 text-sm text-accent-3">{erreur}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center justify-between border-b border-line pb-2 last:border-0">
+      <span>{agence.nom}</span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-text-dim">{agence.ville}</span>
+        <Button variant="secondary" onClick={() => setEdition(true)}>
+          Modifier
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function Agences({ agences, onChange }: { agences: Agence[]; onChange: () => void }) {
   const [nom, setNom] = useState('')
   const [ville, setVille] = useState('')
@@ -30,12 +97,9 @@ export function Agences({ agences, onChange }: { agences: Agence[]; onChange: ()
     <div className="flex max-w-2xl flex-col gap-6">
       <Card>
         <h3 className="mb-4 font-heading text-lg">Agences existantes</h3>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {agences.map((a) => (
-            <div key={a.id} className="flex items-center justify-between border-b border-line pb-2 last:border-0">
-              <span>{a.nom}</span>
-              <span className="text-sm text-text-dim">{a.ville}</span>
-            </div>
+            <LigneAgence key={a.id} agence={a} onChange={onChange} />
           ))}
           {agences.length === 0 && <p className="text-text-dim">Aucune agence pour l'instant.</p>}
         </div>
