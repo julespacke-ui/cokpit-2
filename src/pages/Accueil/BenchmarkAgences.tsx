@@ -9,7 +9,7 @@ import {
   panierMoyen,
   tauxRotation,
 } from '../../lib/calculs'
-import type { Agence, SaisieHebdo } from '../../types/database'
+import type { Agence, Objectif, SaisieHebdo } from '../../types/database'
 
 interface VenteAvecRelations {
   id: string
@@ -31,8 +31,16 @@ interface LigneBenchmark {
   ca: number
   panierMoyen: number
   honorairesMoyens: number
+  totalHonoraires: number
   tauxRotation: number
   mandats: number
+  objectifAtteint: boolean
+}
+
+interface Cibles {
+  ventes?: number
+  ca_honoraires?: number
+  mandats?: number
 }
 
 interface BenchmarkAgencesProps {
@@ -47,6 +55,11 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
 
   useEffect(() => {
     setChargement(true)
+
+    // Les objectifs sont saisis par mois calendaire : on récupère tous les
+    // mois couverts par la période affichée pour cumuler les cibles.
+    const moisDebut = `${du.slice(0, 7)}-01`
+    const moisFin = `${au.slice(0, 7)}-01`
 
     Promise.all([
       supabase.from('agences').select('*').order('nom'),
@@ -66,10 +79,17 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
         .select('commercial_id, agence_id, semaine, stock_total')
         .lt('semaine', du)
         .order('semaine', { ascending: false }),
-    ]).then(([agencesRes, ventesRes, saisiesRes, stockRes]) => {
+      supabase
+        .from('objectifs')
+        .select('*')
+        .is('commercial_id', null)
+        .gte('periode', moisDebut)
+        .lte('periode', moisFin),
+    ]).then(([agencesRes, ventesRes, saisiesRes, stockRes, objectifsRes]) => {
       const agences = agencesRes.data ?? []
       const ventes = (ventesRes.data ?? []) as unknown as VenteAvecRelations[]
       const saisies = (saisiesRes.data ?? []) as SaisieHebdo[]
+      const objectifs = (objectifsRes.data ?? []) as Objectif[]
 
       const dernierStockParCommercial = new Map<string, { agenceId: string; stockTotal: number }>()
       for (const s of stockRes.data ?? []) {
@@ -96,14 +116,48 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
           if (agenceId === agence.id) stockDebut += stockTotal
         }
 
+        const totalHonoraires = ventesAgence.reduce((somme, v) => somme + v.honoraires_reels, 0)
+        const mandats = agregat.mandatsRentres
+
+        // Cumul des cibles agence sur tous les mois couverts par la période.
+        const cibles = objectifs
+          .filter((o) => o.agence_id === agence.id)
+          .reduce<Required<Cibles> & { configure: boolean }>(
+            (acc, o) => {
+              const c = o.cibles as Cibles
+              if (c.ventes !== undefined) {
+                acc.ventes += c.ventes
+                acc.configure = true
+              }
+              if (c.ca_honoraires !== undefined) {
+                acc.ca_honoraires += c.ca_honoraires
+                acc.configure = true
+              }
+              if (c.mandats !== undefined) {
+                acc.mandats += c.mandats
+                acc.configure = true
+              }
+              return acc
+            },
+            { ventes: 0, ca_honoraires: 0, mandats: 0, configure: false },
+          )
+
+        const objectifAtteint =
+          cibles.configure &&
+          ventesAgence.length >= cibles.ventes &&
+          totalHonoraires >= cibles.ca_honoraires &&
+          mandats >= cibles.mandats
+
         return {
           agence,
           ventes: ventesAgence.length,
           ca: chiffreAffaires(paniers),
           panierMoyen: panierMoyen(paniers),
           honorairesMoyens: honorairesMoyens(ventesAgence),
+          totalHonoraires,
           tauxRotation: tauxRotation(ventesAgence.length, stockDebut, agregat.stockEntrees),
-          mandats: agregat.mandatsRentres,
+          mandats,
+          objectifAtteint,
         }
       })
 
@@ -142,7 +196,9 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
             <tr
               key={ligne.agence.id}
               onClick={() => navigate(`/agence/${ligne.agence.id}`)}
-              className="cursor-pointer border-b border-line last:border-0 hover:bg-bg-elev-2"
+              className={`cursor-pointer border-b border-l-4 border-line last:border-0 hover:bg-bg-elev-2 ${
+                ligne.objectifAtteint ? 'border-l-accent-2' : 'border-l-accent-4'
+              }`}
             >
               <td className="px-4 py-3">
                 {ligne.agence.nom} <span className="text-text-faint">({ligne.label})</span>
