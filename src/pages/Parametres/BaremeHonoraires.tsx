@@ -7,6 +7,38 @@ import { Input } from '../../components/ui/Input'
 
 const TRANCHE_VIDE: TrancheHonoraires = { min: 0, max: 0, mode: 'fixe', valeur: 0 }
 
+/** Accepte les nombres tapés avec virgule ou espaces (ex. "15 000", "8,5") tout
+ * en gardant une valeur numérique fiable pour les calculs d'honoraires. */
+function ChampMontant({
+  valeur,
+  onChange,
+  placeholder,
+  className,
+}: {
+  valeur: number
+  onChange: (n: number) => void
+  placeholder?: string
+  className?: string
+}) {
+  const [texte, setTexte] = useState(String(valeur))
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      value={texte}
+      onChange={(e) => {
+        const brut = e.target.value
+        setTexte(brut)
+        const nombre = Number(brut.replace(/\s/g, '').replace(',', '.'))
+        if (!Number.isNaN(nombre)) onChange(nombre)
+      }}
+      placeholder={placeholder}
+      className={className}
+    />
+  )
+}
+
 export function BaremeHonoraires({ agenceId }: { agenceId: string }) {
   const [chargement, setChargement] = useState(true)
   const [tranches, setTranches] = useState<TrancheHonoraires[]>([TRANCHE_VIDE])
@@ -61,19 +93,20 @@ export function BaremeHonoraires({ agenceId }: { agenceId: string }) {
 
       <div className="flex flex-col gap-3">
         {tranches.map((tr, i) => (
-          <div key={i} className="flex flex-wrap items-center gap-2 border-b border-line pb-3 last:border-0">
-            <Input
-              type="number"
-              value={tr.min}
-              onChange={(e) => modifierTranche(i, { min: Number(e.target.value) })}
+          <div
+            key={`${agenceId}-${i}`}
+            className="flex flex-wrap items-center gap-2 border-b border-line pb-3 last:border-0"
+          >
+            <ChampMontant
+              valeur={tr.min}
+              onChange={(min) => modifierTranche(i, { min })}
               placeholder="Min €"
               className="w-24"
             />
             <span className="text-text-faint">à</span>
-            <Input
-              type="number"
-              value={tr.max}
-              onChange={(e) => modifierTranche(i, { max: Number(e.target.value) })}
+            <ChampMontant
+              valeur={tr.max}
+              onChange={(max) => modifierTranche(i, { max })}
               placeholder="Max €"
               className="w-24"
             />
@@ -88,11 +121,9 @@ export function BaremeHonoraires({ agenceId }: { agenceId: string }) {
               <option value="pourcentage">Pourcentage</option>
             </select>
 
-            <Input
-              type="number"
-              step={tr.mode === 'pourcentage' ? '0.1' : '1'}
-              value={tr.valeur}
-              onChange={(e) => modifierTranche(i, { valeur: Number(e.target.value) })}
+            <ChampMontant
+              valeur={tr.valeur}
+              onChange={(valeur) => modifierTranche(i, { valeur })}
               placeholder={tr.mode === 'pourcentage' ? 'Taux %' : 'Montant €'}
               className="w-28"
             />
@@ -101,12 +132,9 @@ export function BaremeHonoraires({ agenceId }: { agenceId: string }) {
             {tr.mode === 'pourcentage' && (
               <>
                 <span className="text-xs text-text-faint">plancher</span>
-                <Input
-                  type="number"
-                  value={tr.plancher ?? ''}
-                  onChange={(e) =>
-                    modifierTranche(i, { plancher: e.target.value === '' ? undefined : Number(e.target.value) })
-                  }
+                <ChampMontant
+                  valeur={tr.plancher ?? 0}
+                  onChange={(plancher) => modifierTranche(i, { plancher })}
                   placeholder="optionnel €"
                   className="w-28"
                 />

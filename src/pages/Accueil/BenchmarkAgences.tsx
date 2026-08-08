@@ -145,7 +145,7 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
               className="cursor-pointer border-b border-line last:border-0 hover:bg-bg-elev-2"
             >
               <td className="px-4 py-3">
-                {ligne.label} <span className="text-text-faint">({ligne.agence.nom})</span>
+                {ligne.agence.nom} <span className="text-text-faint">({ligne.label})</span>
               </td>
               <td className="px-4 py-3 text-right tabular-nums">{ligne.ventes}</td>
               <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>
