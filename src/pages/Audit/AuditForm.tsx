@@ -124,12 +124,9 @@ export function AuditForm({ audit, agences, onEnregistre, onAnnuler }: AuditForm
                   />
                 ) : (
                   <Input
-                    type={champ.type === 'nombre' ? 'number' : 'text'}
-                    inputMode={champ.type === 'nombre' ? 'numeric' : undefined}
+                    type="text"
                     value={(reponses[champ.cle] as string | number) ?? ''}
-                    onChange={(e) =>
-                      modifier(champ.cle, champ.type === 'nombre' && e.target.value !== '' ? Number(e.target.value) : e.target.value)
-                    }
+                    onChange={(e) => modifier(champ.cle, e.target.value)}
                     className="w-full"
                   />
                 )}
