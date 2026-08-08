@@ -11,15 +11,18 @@ export function AuditPage() {
   const [audits, setAudits] = useState<Audit[]>([])
   const [agences, setAgences] = useState<Agence[]>([])
   const [chargement, setChargement] = useState(true)
+  const [erreur, setErreur] = useState<string | null>(null)
   /** null = liste ; 'nouveau' = création ; sinon l'audit en cours d'édition. */
   const [vue, setVue] = useState<'liste' | 'nouveau' | Audit>('liste')
 
   function charger() {
     setChargement(true)
+    setErreur(null)
     Promise.all([
       supabase.from('audits').select('*').order('date', { ascending: false }),
       supabase.from('agences').select('*').order('nom'),
     ]).then(([auditsRes, agencesRes]) => {
+      if (auditsRes.error) setErreur(auditsRes.error.message)
       setAudits((auditsRes.data ?? []) as Audit[])
       setAgences(agencesRes.data ?? [])
       setChargement(false)
@@ -66,6 +69,12 @@ export function AuditPage() {
         </div>
         <Button onClick={() => setVue('nouveau')}>+ Nouvel audit</Button>
       </div>
+
+      {erreur && (
+        <p className="mb-4 max-w-2xl rounded-lg bg-accent-3/15 px-4 py-3 text-sm text-accent-3">
+          Erreur de chargement : {erreur}
+        </p>
+      )}
 
       {chargement ? (
         <p className="text-text-dim">Chargement…</p>
