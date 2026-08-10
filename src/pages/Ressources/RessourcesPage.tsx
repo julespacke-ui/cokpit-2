@@ -9,14 +9,64 @@ import {
 } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 
-async function ouvrirFichier(storagePath: string) {
+function estHtml(storagePath: string): boolean {
+  return storagePath.toLowerCase().endsWith('.html')
+}
+
+async function telecharger(storagePath: string) {
   const { data } = await supabase.storage.from('ressources').createSignedUrl(storagePath, 3600)
   if (data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
+}
+
+function ApercuHtml({ titre, html, onFermer }: { titre: string; html: string; onFermer: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col gap-3 bg-bg/95 p-4 md:p-8">
+      <div className="flex items-center justify-between">
+        <h3 className="font-heading text-lg">{titre}</h3>
+        <button
+          type="button"
+          onClick={onFermer}
+          className="rounded-lg border border-line bg-bg-elev-2 px-4 py-2 text-sm text-text hover:bg-line"
+        >
+          Fermer
+        </button>
+      </div>
+      <iframe
+        srcDoc={html}
+        title={titre}
+        // sandbox sans "allow-same-origin" : même protection que les plans
+        // d'action, le fichier ne peut pas lire la session de l'utilisateur.
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        className="w-full flex-1 rounded-[var(--radius-card)] border border-line bg-bg"
+      />
+    </div>
+  )
 }
 
 function ListeRessources({ agenceId }: { agenceId: string }) {
   const [ressources, setRessources] = useState<Ressource[]>([])
   const [chargement, setChargement] = useState(true)
+  const [apercu, setApercu] = useState<{ titre: string; html: string } | null>(null)
+  const [chargementApercuId, setChargementApercuId] = useState<string | null>(null)
+
+  async function ouvrir(r: Ressource) {
+    if (!r.storage_path) return
+    if (!estHtml(r.storage_path)) {
+      telecharger(r.storage_path)
+      return
+    }
+    setChargementApercuId(r.id)
+    const { data } = await supabase.storage.from('ressources').createSignedUrl(r.storage_path, 3600)
+    if (data?.signedUrl) {
+      // Supabase sert les fichiers en text/plain sur les URLs signées : on
+      // récupère le contenu en texte et on l'injecte via srcDoc plutôt que
+      // d'ouvrir l'URL brute, qui afficherait le code source au lieu de la
+      // page rendue.
+      const reponse = await fetch(data.signedUrl)
+      setApercu({ titre: r.libelle, html: await reponse.text() })
+    }
+    setChargementApercuId(null)
+  }
 
   useEffect(() => {
     setChargement(true)
@@ -63,10 +113,15 @@ function ListeRessources({ agenceId }: { agenceId: string }) {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => ouvrirFichier(r.storage_path!)}
-                      className="text-sm text-accent-5 hover:underline"
+                      onClick={() => ouvrir(r)}
+                      disabled={chargementApercuId === r.id}
+                      className="text-sm text-accent-5 hover:underline disabled:opacity-50"
                     >
-                      Télécharger →
+                      {chargementApercuId === r.id
+                        ? 'Ouverture…'
+                        : estHtml(r.storage_path!)
+                          ? 'Ouvrir →'
+                          : 'Télécharger →'}
                     </button>
                   )}
                 </Card>
@@ -75,6 +130,8 @@ function ListeRessources({ agenceId }: { agenceId: string }) {
           </div>
         )
       })}
+
+      {apercu && <ApercuHtml titre={apercu.titre} html={apercu.html} onFermer={() => setApercu(null)} />}
     </div>
   )
 }
