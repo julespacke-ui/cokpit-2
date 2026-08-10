@@ -10,6 +10,7 @@ export function Ressources({ agenceId }: { agenceId: string }) {
   const [chargement, setChargement] = useState(true)
 
   const [type, setType] = useState<'lien' | 'fichier'>('lien')
+  const [portee, setPortee] = useState<'agence' | 'commune'>('agence')
   const [libelle, setLibelle] = useState('')
   const [categorie, setCategorie] = useState<CategorieRessource>('autre')
   const [url, setUrl] = useState('')
@@ -22,7 +23,7 @@ export function Ressources({ agenceId }: { agenceId: string }) {
     supabase
       .from('ressources')
       .select('*')
-      .eq('agence_id', agenceId)
+      .or(`agence_id.eq.${agenceId},agence_id.is.null`)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         setRessources(data ?? [])
@@ -51,9 +52,11 @@ export function Ressources({ agenceId }: { agenceId: string }) {
 
     setEnvoiEnCours(true)
 
+    const dossier = portee === 'commune' ? 'commun' : agenceId
+
     let storagePath: string | null = null
     if (type === 'fichier' && fichier) {
-      storagePath = `${agenceId}/${Date.now()}-${fichier.name}`
+      storagePath = `${dossier}/${Date.now()}-${fichier.name}`
       const { error: erreurUpload } = await supabase.storage.from('ressources').upload(storagePath, fichier)
       if (erreurUpload) {
         setEnvoiEnCours(false)
@@ -63,7 +66,7 @@ export function Ressources({ agenceId }: { agenceId: string }) {
     }
 
     const { error: erreurTable } = await supabase.from('ressources').insert({
-      agence_id: agenceId,
+      agence_id: portee === 'commune' ? null : agenceId,
       type,
       libelle,
       url: type === 'lien' ? url : null,
@@ -104,6 +107,7 @@ export function Ressources({ agenceId }: { agenceId: string }) {
                 {r.libelle}
                 <span className="ml-2 text-xs text-text-faint">
                   {CATEGORIE_RESSOURCE_LABELS[r.categorie]} · {r.type === 'lien' ? 'Lien' : 'Fichier'}
+                  {r.agence_id === null && ' · Commune à tous les points de vente'}
                 </span>
               </span>
               <Button type="button" variant="danger" onClick={() => supprimer(r)}>
@@ -133,6 +137,26 @@ export function Ressources({ agenceId }: { agenceId: string }) {
             >
               Fichier
             </button>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm text-text-dim">Visibilité</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPortee('agence')}
+                className={`rounded-lg px-4 py-2 text-sm ${portee === 'agence' ? 'bg-accent-4 text-bg' : 'bg-bg-elev-2 text-text-dim'}`}
+              >
+                Ce point de vente uniquement
+              </button>
+              <button
+                type="button"
+                onClick={() => setPortee('commune')}
+                className={`rounded-lg px-4 py-2 text-sm ${portee === 'commune' ? 'bg-accent-4 text-bg' : 'bg-bg-elev-2 text-text-dim'}`}
+              >
+                Commune à tous les points de vente
+              </button>
+            </div>
           </div>
 
           <Input value={libelle} onChange={(e) => setLibelle(e.target.value)} placeholder="Libellé" required />

@@ -168,7 +168,8 @@ export interface PlanAction {
 
 export interface Ressource {
   id: string
-  agence_id: string
+  /** Null = ressource commune à tous les points de vente. */
+  agence_id: string | null
   type: 'lien' | 'fichier'
   libelle: string
   url: string | null

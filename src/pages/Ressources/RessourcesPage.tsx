@@ -23,7 +23,7 @@ function ListeRessources({ agenceId }: { agenceId: string }) {
     supabase
       .from('ressources')
       .select('*')
-      .eq('agence_id', agenceId)
+      .or(`agence_id.eq.${agenceId},agence_id.is.null`)
       .order('libelle')
       .then(({ data }) => {
         setRessources(data ?? [])
@@ -45,7 +45,12 @@ function ListeRessources({ agenceId }: { agenceId: string }) {
             <div className="flex flex-col gap-2">
               {items.map((r) => (
                 <Card key={r.id} className="flex items-center justify-between">
-                  <span>{r.libelle}</span>
+                  <span>
+                    {r.libelle}
+                    {r.agence_id === null && (
+                      <span className="ml-2 text-xs text-text-faint">· Commune</span>
+                    )}
+                  </span>
                   {r.type === 'lien' ? (
                     <a
                       href={r.url!}
