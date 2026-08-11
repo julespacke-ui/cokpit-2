@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Home,
   CalendarDays,
@@ -38,6 +38,7 @@ const ROLE_LABELS: Record<Role, string> = {
 
 export function AppShell() {
   const { profile, agence, signOut } = useAuth()
+  const location = useLocation()
 
   if (!profile) return null
 
@@ -109,7 +110,9 @@ export function AppShell() {
       </header>
 
       <main className="flex-1 pb-20 md:pb-0">
-        <Outlet />
+        <div key={location.pathname} className="animate-page-in">
+          <Outlet />
+        </div>
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-bg-elev md:hidden">
@@ -119,7 +122,7 @@ export function AppShell() {
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] ${
+              `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-colors duration-150 ${
                 isActive ? 'text-accent-4' : 'text-text-dim'
               }`
             }

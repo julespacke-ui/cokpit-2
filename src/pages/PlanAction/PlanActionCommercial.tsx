@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import type { PlanAction } from '../../types/database'
+import { Skeleton } from '../../components/ui/Skeleton'
 
 export function PlanActionCommercial() {
   const { profile } = useAuth()
@@ -36,7 +37,7 @@ export function PlanActionCommercial() {
       })
   }, [profile])
 
-  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (chargement) return <Skeleton lignes={8} className="h-[75vh] justify-center rounded-[var(--radius-card)] border border-line bg-bg-elev p-6" />
 
   if (!plan || !contenuHtml) {
     return (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { SkeletonTableau } from '../../components/ui/Skeleton'
 
 interface LigneClassement {
   id: string
@@ -69,7 +70,7 @@ export function ClassementAgence({ agenceId, du, au, utilisateurActuelId }: Clas
     })
   }, [agenceId, du, au])
 
-  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (chargement) return <SkeletonTableau />
 
   return (
     <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-bg-elev">

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { CATEGORIE_RESSOURCE_LABELS, ORDRE_CATEGORIES_RESSOURCE, type CategorieRessource, type Ressource } from '../../types/database'
 import { Card } from '../../components/ui/Card'
+import { Skeleton } from '../../components/ui/Skeleton'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 
@@ -94,7 +95,7 @@ export function Ressources({ agenceId }: { agenceId: string }) {
     charger()
   }
 
-  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (chargement) return <Skeleton lignes={4} className="max-w-2xl" />
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -176,7 +177,7 @@ export function Ressources({ agenceId }: { agenceId: string }) {
           {type === 'lien' ? (
             <Input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." />
           ) : (
-            <label className="cursor-pointer self-start rounded-lg border border-line bg-bg-elev-2 px-4 py-2.5 text-sm font-medium text-text hover:bg-line">
+            <label className="cursor-pointer self-start rounded-lg border border-line bg-bg-elev-2 px-4 py-2.5 text-sm font-medium text-text transition-colors duration-150 hover:bg-line">
               {fichier ? fichier.name : 'Choisir un fichier'}
               <input
                 type="file"

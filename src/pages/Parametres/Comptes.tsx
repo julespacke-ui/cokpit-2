@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Profile, Role } from '../../types/database'
 import { Card } from '../../components/ui/Card'
+import { Skeleton } from '../../components/ui/Skeleton'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Toggle } from '../../components/ui/Toggle'
@@ -71,7 +72,7 @@ export function Comptes({ agenceId, peutChoisirRole }: ComptesProps) {
     charger()
   }
 
-  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (chargement) return <Skeleton lignes={4} className="max-w-2xl" />
 
   return (
     <Card className="max-w-2xl">

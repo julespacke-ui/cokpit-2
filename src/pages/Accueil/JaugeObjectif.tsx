@@ -1,3 +1,6 @@
+import { CompteurAnime } from '../../components/ui/CompteurAnime'
+import { BarreProgression } from '../../components/ui/BarreProgression'
+
 interface JaugeObjectifProps {
   label: string
   valeur: number
@@ -13,22 +16,18 @@ export function JaugeObjectif({ label, valeur, cible, unite = '' }: JaugeObjecti
     <div className="rounded-[var(--radius-card)] border border-line bg-bg-elev p-4">
       <p className="text-sm text-text-dim">{label}</p>
       <p className="mt-1 font-heading text-xl tabular-nums">
-        {Math.round(valeur).toLocaleString('fr-FR')}
-        {unite}{' '}
+        <CompteurAnime valeur={Math.round(valeur)} suffixe={unite} />{' '}
         <span className="text-sm font-normal text-text-faint">
           / {cible.toLocaleString('fr-FR')}
           {unite}
         </span>
       </p>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-bg-elev-2">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{
-            width: `${pourcentage}%`,
-            background: atteint ? 'var(--accent-2)' : 'linear-gradient(90deg, var(--accent-4), var(--accent-1))',
-          }}
-        />
-      </div>
+      <BarreProgression
+        pourcentage={pourcentage}
+        couleur={atteint ? 'var(--accent-2)' : 'linear-gradient(90deg, var(--accent-4), var(--accent-1))'}
+        hauteur="h-2"
+        className="mt-3"
+      />
     </div>
   )
 }

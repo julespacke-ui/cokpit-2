@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase'
 import type { SaisieHebdo } from '../types/database'
 import { Button } from '../components/ui/Button'
 import { ToggleVisuel } from '../components/ui/Toggle'
+import { SkeletonCarte } from '../components/ui/Skeleton'
+import { BarreProgression } from '../components/ui/BarreProgression'
+import { Toast, useToast } from '../components/ui/Toast'
 
 type ChampsSaisie = Pick<
   SaisieHebdo,
@@ -199,7 +202,8 @@ export function MaSemaine() {
   const [semainesRemplies, setSemainesRemplies] = useState<Set<string>>(new Set())
   const [chargement, setChargement] = useState(true)
   const [enregistrement, setEnregistrement] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const toast = useToast()
 
   const semaineISO = toISODate(lundi)
   const semainePrecedenteISO = toISODate(ajouterJours(lundi, -7))
@@ -208,7 +212,7 @@ export function MaSemaine() {
   useEffect(() => {
     if (!profile) return
     setChargement(true)
-    setMessage(null)
+    setErreur(null)
 
     Promise.all([
       supabase
@@ -267,7 +271,7 @@ export function MaSemaine() {
 
   async function enregistrer() {
     setEnregistrement(true)
-    setMessage(null)
+    setErreur(null)
     const { error } = await supabase.from('saisies_hebdo').upsert(
       {
         commercial_id: profile!.id,
@@ -278,8 +282,12 @@ export function MaSemaine() {
       { onConflict: 'commercial_id,semaine' },
     )
     setEnregistrement(false)
-    setMessage(error ? `Erreur : ${error.message}` : 'Semaine enregistrée.')
-    if (!error) chargerSemainesRemplies()
+    if (error) {
+      setErreur(error.message)
+      return
+    }
+    toast.montrer('Semaine enregistrée')
+    chargerSemainesRemplies()
   }
 
   return (
@@ -296,12 +304,10 @@ export function MaSemaine() {
           >
             {semainesRempliesFenetre}/{FENETRE_PROGRESSION} semaines remplies
           </p>
-          <div className="h-1.5 overflow-hidden rounded-full bg-bg-elev-2">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-accent-4 to-accent-1"
-              style={{ width: `${(semainesRempliesFenetre / FENETRE_PROGRESSION) * 100}%` }}
-            />
-          </div>
+          <BarreProgression
+            pourcentage={(semainesRempliesFenetre / FENETRE_PROGRESSION) * 100}
+            couleur="linear-gradient(90deg, var(--accent-4), var(--accent-1))"
+          />
         </div>
       </div>
 
@@ -323,7 +329,11 @@ export function MaSemaine() {
       </div>
 
       {chargement ? (
-        <p className="text-text-dim">Chargement…</p>
+        <div className="grid max-w-2xl gap-4 sm:grid-cols-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCarte key={i} />
+          ))}
+        </div>
       ) : (
         <div className="flex max-w-2xl flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -466,13 +476,15 @@ export function MaSemaine() {
             </BlocCard>
           </div>
 
-          {message && <p className="text-sm text-text-dim">{message}</p>}
+          {erreur && <p className="rounded-lg bg-accent-3/15 px-4 py-3 text-sm text-accent-3">{erreur}</p>}
 
           <Button onClick={enregistrer} disabled={enregistrement} className="self-start">
             {enregistrement ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
         </div>
       )}
+
+      <Toast message={toast.message} cle={toast.cle} onFermer={toast.fermer} />
     </div>
   )
 }

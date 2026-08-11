@@ -5,6 +5,7 @@ import { calculerPanierVente } from '../../lib/calculs'
 import type { Profile } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
+import { SkeletonTableau } from '../../components/ui/Skeleton'
 
 const ORIGINE_LABELS: Record<string, string> = {
   recommandation: 'Recommandation',
@@ -135,7 +136,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
       </div>
 
       {chargement ? (
-        <p className="text-text-dim">Chargement…</p>
+        <SkeletonTableau lignes={5} />
       ) : ventes.length === 0 ? (
         <p className="text-text-dim">Aucune vente sur cette période.</p>
       ) : (

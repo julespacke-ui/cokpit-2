@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import type { Agence, Audit } from '../../types/database'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { Skeleton } from '../../components/ui/Skeleton'
 import { AuditForm } from './AuditForm'
 
 const FORMAT_DATE = new Intl.DateTimeFormat('fr-FR')
@@ -77,7 +78,7 @@ export function AuditPage() {
       )}
 
       {chargement ? (
-        <p className="text-text-dim">Chargement…</p>
+        <Skeleton lignes={4} className="max-w-2xl" />
       ) : audits.length === 0 ? (
         <Card className="max-w-2xl text-text-dim">
           Aucun audit pour l'instant. Clique sur « Nouvel audit » après un call de découverte.

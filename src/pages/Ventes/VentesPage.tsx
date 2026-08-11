@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import type { BaremeHonoraires, ExtensionGarantie, PackMer } from '../../types/database'
 import { Button } from '../../components/ui/Button'
+import { Toast, useToast } from '../../components/ui/Toast'
 import { NouvelleVenteForm } from './NouvelleVenteForm'
 import { HistoriqueVentes } from './HistoriqueVentes'
 
@@ -13,6 +14,7 @@ export function VentesPage() {
   const [packs, setPacks] = useState<PackMer[]>([])
   const [extensions, setExtensions] = useState<ExtensionGarantie[]>([])
   const [rafraichir, setRafraichir] = useState(0)
+  const toast = useToast()
 
   useEffect(() => {
     if (!profile?.agence_id) return
@@ -52,6 +54,7 @@ export function VentesPage() {
             onCreated={() => {
               setFormulaireOuvert(false)
               setRafraichir((r) => r + 1)
+              toast.montrer('Vente enregistrée')
             }}
             onCancel={() => setFormulaireOuvert(false)}
           />
@@ -59,6 +62,8 @@ export function VentesPage() {
       )}
 
       <HistoriqueVentes agenceId={profile.agence_id} rafraichir={rafraichir} />
+
+      <Toast message={toast.message} cle={toast.cle} onFermer={toast.fermer} />
     </div>
   )
 }

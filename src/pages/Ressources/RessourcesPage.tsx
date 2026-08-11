@@ -8,6 +8,7 @@ import {
   type Ressource,
 } from '../../types/database'
 import { Card } from '../../components/ui/Card'
+import { Skeleton } from '../../components/ui/Skeleton'
 
 function estHtml(storagePath: string): boolean {
   return storagePath.toLowerCase().endsWith('.html')
@@ -81,7 +82,7 @@ function ListeRessources({ agenceId }: { agenceId: string }) {
       })
   }, [agenceId])
 
-  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (chargement) return <Skeleton lignes={4} className="max-w-2xl" />
   if (ressources.length === 0) return <p className="text-text-dim">Aucune ressource pour l'instant.</p>
 
   return (

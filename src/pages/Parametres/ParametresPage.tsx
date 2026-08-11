@@ -64,8 +64,8 @@ export function ParametresPage() {
             key={o.id}
             type="button"
             onClick={() => setOnglet(o.id)}
-            className={`shrink-0 border-b-2 px-4 py-2.5 text-sm ${
-              onglet === o.id ? 'border-accent-4 text-text' : 'border-transparent text-text-dim'
+            className={`shrink-0 border-b-2 px-4 py-2.5 text-sm transition-colors duration-150 ${
+              onglet === o.id ? 'border-accent-4 text-text' : 'border-transparent text-text-dim hover:text-text'
             }`}
           >
             {o.label}
@@ -90,24 +90,26 @@ export function ParametresPage() {
         </div>
       )}
 
-      {onglet === 'agences' && estAdmin && <Agences agences={agences} onChange={rafraichirAgences} />}
-      {onglet === 'bareme' && agenceSelectionneeId && <BaremeHonoraires agenceId={agenceSelectionneeId} />}
-      {onglet === 'packs' && agenceSelectionneeId && <PacksMer agenceId={agenceSelectionneeId} />}
-      {onglet === 'extensions' && agenceSelectionneeId && <ExtensionsGarantie agenceId={agenceSelectionneeId} />}
-      {onglet === 'comptes' && agenceSelectionneeId && (
-        <Comptes agenceId={agenceSelectionneeId} peutChoisirRole={estAdmin} />
-      )}
-      {onglet === 'objectifs' && agenceSelectionneeId && <Objectifs agenceId={agenceSelectionneeId} />}
-      {onglet === 'plans_action' && estAdmin && agenceSelectionneeId && (
-        <PlansAction agenceId={agenceSelectionneeId} />
-      )}
-      {onglet === 'ressources' && estAdmin && agenceSelectionneeId && (
-        <Ressources agenceId={agenceSelectionneeId} />
-      )}
+      <div key={`${onglet}-${agenceSelectionneeId}`} className="animate-page-in">
+        {onglet === 'agences' && estAdmin && <Agences agences={agences} onChange={rafraichirAgences} />}
+        {onglet === 'bareme' && agenceSelectionneeId && <BaremeHonoraires agenceId={agenceSelectionneeId} />}
+        {onglet === 'packs' && agenceSelectionneeId && <PacksMer agenceId={agenceSelectionneeId} />}
+        {onglet === 'extensions' && agenceSelectionneeId && <ExtensionsGarantie agenceId={agenceSelectionneeId} />}
+        {onglet === 'comptes' && agenceSelectionneeId && (
+          <Comptes agenceId={agenceSelectionneeId} peutChoisirRole={estAdmin} />
+        )}
+        {onglet === 'objectifs' && agenceSelectionneeId && <Objectifs agenceId={agenceSelectionneeId} />}
+        {onglet === 'plans_action' && estAdmin && agenceSelectionneeId && (
+          <PlansAction agenceId={agenceSelectionneeId} />
+        )}
+        {onglet === 'ressources' && estAdmin && agenceSelectionneeId && (
+          <Ressources agenceId={agenceSelectionneeId} />
+        )}
 
-      {onglet !== 'agences' && !agenceSelectionneeId && (
-        <p className="text-text-dim">Crée d'abord une agence dans l'onglet "Agences".</p>
-      )}
+        {onglet !== 'agences' && !agenceSelectionneeId && (
+          <p className="text-text-dim">Crée d'abord une agence dans l'onglet "Agences".</p>
+        )}
+      </div>
     </div>
   )
 }

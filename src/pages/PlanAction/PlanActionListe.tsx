@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { PlanAction, Profile } from '../../types/database'
+import { Skeleton } from '../../components/ui/Skeleton'
 
 interface LigneCommercial {
   profil: Profile
@@ -62,7 +63,7 @@ export function PlanActionListe({ agenceId }: { agenceId: string }) {
       })
   }, [selectionId, lignes])
 
-  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (chargement) return <Skeleton lignes={4} className="max-w-sm" />
 
   if (lignes.length === 0) {
     return <p className="text-text-dim">Aucun commercial dans cette agence.</p>

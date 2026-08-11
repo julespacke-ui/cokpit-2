@@ -10,6 +10,7 @@ import {
   tauxRotation,
 } from '../../lib/calculs'
 import type { Agence, Objectif, SaisieHebdo } from '../../types/database'
+import { SkeletonTableau } from '../../components/ui/Skeleton'
 
 interface VenteAvecRelations {
   id: string
@@ -174,7 +175,7 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
     })
   }, [du, au])
 
-  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (chargement) return <SkeletonTableau lignes={5} />
   if (lignes.length === 0) return <p className="text-text-dim">Aucune agence pour l'instant.</p>
 
   return (
@@ -196,7 +197,7 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
             <tr
               key={ligne.agence.id}
               onClick={() => navigate(`/agence/${ligne.agence.id}`)}
-              className={`cursor-pointer border-b border-l-4 border-line last:border-0 hover:bg-bg-elev-2 ${
+              className={`cursor-pointer border-b border-l-4 border-line transition-colors duration-150 last:border-0 hover:bg-bg-elev-2 active:bg-bg-elev-2/70 ${
                 ligne.objectifAtteint ? 'border-l-accent-2' : 'border-l-accent-4'
               }`}
             >

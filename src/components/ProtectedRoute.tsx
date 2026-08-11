@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import type { Role } from '../types/database'
 
@@ -33,7 +34,11 @@ export function ProtectedRoute({ rolesAutorises }: ProtectedRouteProps) {
   const { session, profile, loading } = useAuth()
 
   if (loading) {
-    return <div className="flex min-h-svh items-center justify-center text-text-dim">Chargement…</div>
+    return (
+      <div className="flex min-h-svh items-center justify-center text-text-dim">
+        <Loader2 size={22} className="animate-spin" />
+      </div>
+    )
   }
 
   if (!session) {

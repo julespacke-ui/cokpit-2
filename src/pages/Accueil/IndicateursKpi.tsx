@@ -9,6 +9,7 @@ import {
   tauxRotation,
   type AgregatSaisies,
 } from '../../lib/calculs'
+import { CompteurAnime } from '../../components/ui/CompteurAnime'
 
 interface VenteIndicateur {
   honoraires_reels: number
@@ -32,8 +33,7 @@ function StatCard({ label, valeur, unite = '' }: { label: string; valeur: number
     <div className="rounded-[var(--radius-card)] border border-line bg-bg-elev p-2.5">
       <p className="text-xs text-text-dim">{label}</p>
       <p className="mt-0.5 font-heading text-sm tabular-nums">
-        {valeur.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}
-        {unite}
+        <CompteurAnime valeur={valeur} decimales={1} suffixe={unite} />
       </p>
     </div>
   )

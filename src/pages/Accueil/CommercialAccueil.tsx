@@ -8,6 +8,7 @@ import { JaugeObjectif } from './JaugeObjectif'
 import { IndicateursKpi } from './IndicateursKpi'
 import { ClassementAgence } from './ClassementAgence'
 import { PeriodeSelector, type PlagePeriode } from './PeriodeSelector'
+import { SkeletonCarte } from '../../components/ui/Skeleton'
 
 interface VenteAvecRelations {
   id: string
@@ -150,7 +151,11 @@ export function CommercialAccueil() {
       <section className="mb-8">
         <h3 className="mb-4 font-heading text-lg">Objectifs du mois</h3>
         {chargementObjectifs ? (
-          <p className="text-text-dim">Chargement…</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonCarte key={i} />
+            ))}
+          </div>
         ) : Object.keys(cibles).length === 0 ? (
           <p className="text-text-dim">Aucun objectif défini pour ce mois.</p>
         ) : (
@@ -186,7 +191,11 @@ export function CommercialAccueil() {
           <PeriodeSelector onChange={setPlage} />
         </div>
         {chargementIndicateurs || !agregatPeriode ? (
-          <p className="text-text-dim">Chargement…</p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <SkeletonCarte key={i} className="p-2.5" />
+            ))}
+          </div>
         ) : (
           <IndicateursKpi
             agregat={agregatPeriode}

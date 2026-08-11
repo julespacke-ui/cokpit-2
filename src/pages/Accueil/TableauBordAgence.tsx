@@ -11,8 +11,11 @@ import {
 import type { SaisieHebdo } from '../../types/database'
 import { IndicateursKpi } from './IndicateursKpi'
 import { ClassementAgence } from './ClassementAgence'
+import { CamembertCA } from './CamembertCA'
 import { PeriodeSelector, type PlagePeriode } from './PeriodeSelector'
 import { SuiviRemplissage } from './SuiviRemplissage'
+import { CompteurAnime } from '../../components/ui/CompteurAnime'
+import { SkeletonCarte, SkeletonTableau } from '../../components/ui/Skeleton'
 
 interface VenteAvecRelations {
   id: string
@@ -32,8 +35,7 @@ function StatMiseEnAvant({ label, valeur, unite = '' }: { label: string; valeur:
     <div className="rounded-[var(--radius-card)] border border-line bg-bg-elev p-6">
       <p className="text-sm text-text-dim">{label}</p>
       <p className="mt-2 font-heading text-3xl tabular-nums">
-        {valeur.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
-        {unite}
+        <CompteurAnime valeur={valeur} suffixe={unite} />
       </p>
     </div>
   )
@@ -122,9 +124,16 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId }: TableauBord
       </div>
 
       {chargement || !agregat ? (
-        <p className="text-text-dim">Chargement…</p>
+        <div className="flex flex-col gap-8">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <SkeletonCarte />
+            <SkeletonCarte />
+            <SkeletonCarte />
+          </div>
+          <SkeletonTableau />
+        </div>
       ) : (
-        <>
+        <div className="animate-page-in">
           <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatMiseEnAvant label="Chiffre d'affaires TTC" valeur={chiffreAffaires(paniers)} unite=" €" />
             <StatMiseEnAvant label="Panier moyen TTC" valeur={panierMoyen(paniers)} unite=" €" />
@@ -134,12 +143,15 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId }: TableauBord
           <section className="mb-8">
             <h3 className="mb-4 font-heading text-lg">Détail par commercial</h3>
             {plage && (
-              <ClassementAgence
-                agenceId={agenceId}
-                du={plage.du}
-                au={plage.au}
-                utilisateurActuelId={utilisateurActuelId}
-              />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+                <ClassementAgence
+                  agenceId={agenceId}
+                  du={plage.du}
+                  au={plage.au}
+                  utilisateurActuelId={utilisateurActuelId}
+                />
+                <CamembertCA agenceId={agenceId} ventes={ventes} />
+              </div>
             )}
           </section>
 
@@ -158,7 +170,7 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId }: TableauBord
               inclureSynthese={false}
             />
           </section>
-        </>
+        </div>
       )}
     </div>
   )

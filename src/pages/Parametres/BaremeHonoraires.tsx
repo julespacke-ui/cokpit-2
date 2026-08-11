@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { BaremeHonoraires as BaremeHonorairesRow, ModeTranche, TrancheHonoraires } from '../../types/database'
 import { Card } from '../../components/ui/Card'
+import { Skeleton } from '../../components/ui/Skeleton'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 
@@ -82,7 +83,7 @@ export function BaremeHonoraires({ agenceId }: { agenceId: string }) {
     setMessage(error ? `Erreur : ${error.message}` : 'Barème enregistré.')
   }
 
-  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (chargement) return <Skeleton lignes={4} className="max-w-2xl" />
 
   return (
     <Card className="max-w-3xl">

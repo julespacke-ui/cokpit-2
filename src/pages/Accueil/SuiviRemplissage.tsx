@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { calculerStatutSemaine } from '../../lib/calculs'
 import { listeSemaines, toISODate } from '../../lib/periodes'
 import type { Profile } from '../../types/database'
+import { Skeleton } from '../../components/ui/Skeleton'
 
 interface LigneSuivi {
   profil: Profile
@@ -23,11 +24,14 @@ export function SuiviRemplissage({ agenceId }: { agenceId: string }) {
 
   useEffect(() => {
     setChargement(true)
+    // Seuls les commerciaux ont une obligation de remplissage hebdo : le
+    // gérant peut saisir sa propre semaine, mais l'alerte ne le concerne
+    // jamais, même s'il n'a rien rempli depuis longtemps.
     supabase
       .from('profiles')
       .select('*')
       .eq('agence_id', agenceId)
-      .in('role', ['gerant', 'commercial'])
+      .eq('role', 'commercial')
       .eq('actif', true)
       .order('prenom')
       .then(async ({ data: profils }) => {
@@ -45,7 +49,7 @@ export function SuiviRemplissage({ agenceId }: { agenceId: string }) {
       })
   }, [agenceId])
 
-  if (chargement) return <p className="text-text-dim">Chargement…</p>
+  if (chargement) return <Skeleton lignes={3} className="max-w-md" />
   if (lignes.length === 0) return <p className="text-text-dim">Aucun commercial actif.</p>
 
   return (
