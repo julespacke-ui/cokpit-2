@@ -52,6 +52,8 @@ interface BenchmarkAgencesProps {
 export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
   const navigate = useNavigate()
   const [lignes, setLignes] = useState<LigneBenchmark[]>([])
+  const [lignesDemo, setLignesDemo] = useState<LigneBenchmark[]>([])
+  const [demoOuvert, setDemoOuvert] = useState(false)
   const [chargement, setChargement] = useState(true)
 
   useEffect(() => {
@@ -163,21 +165,62 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
       })
 
       // Classement par CA décroissant : la meilleure agence devient "Agence A".
-      lignesSansLabel.sort((a, b) => b.ca - a.ca)
+      // Réelles et démo/test sont classées séparément, chacune sa propre lettre.
+      function etiqueter(groupe: Omit<LigneBenchmark, 'label'>[]): LigneBenchmark[] {
+        const trie = [...groupe].sort((a, b) => b.ca - a.ca)
+        return trie.map((ligne, index) => ({ ...ligne, label: `Agence ${String.fromCharCode(65 + index)}` }))
+      }
 
-      const lignesCalc: LigneBenchmark[] = lignesSansLabel.map((ligne, index) => ({
-        ...ligne,
-        label: `Agence ${String.fromCharCode(65 + index)}`,
-      }))
-
-      setLignes(lignesCalc)
+      setLignes(etiqueter(lignesSansLabel.filter((l) => !l.agence.est_demo)))
+      setLignesDemo(etiqueter(lignesSansLabel.filter((l) => l.agence.est_demo)))
       setChargement(false)
     })
   }, [du, au])
 
   if (chargement) return <SkeletonTableau lignes={5} />
-  if (lignes.length === 0) return <p className="text-text-dim">Aucune agence pour l'instant.</p>
+  if (lignes.length === 0 && lignesDemo.length === 0) {
+    return <p className="text-text-dim">Aucune agence pour l'instant.</p>
+  }
 
+  return (
+    <div className="flex flex-col gap-4">
+      {lignes.length === 0 ? (
+        <p className="text-text-dim">Aucune agence cliente pour l'instant.</p>
+      ) : (
+        <TableBenchmark lignes={lignes} onClickAgence={(id) => navigate(`/agence/${id}`)} />
+      )}
+
+      {lignesDemo.length > 0 && (
+        <div className="rounded-[var(--radius-card)] border border-line bg-bg-elev">
+          <button
+            type="button"
+            onClick={() => setDemoOuvert((v) => !v)}
+            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-text-dim transition-colors duration-150 hover:text-text"
+          >
+            <span>
+              Comptes de démo/test ({lignesDemo.length}){' '}
+              <span className="text-text-faint">— exclus du benchmark ci-dessus</span>
+            </span>
+            <span className="text-text-faint">{demoOuvert ? '▲' : '▼'}</span>
+          </button>
+          {demoOuvert && (
+            <div className="animate-page-in border-t border-line p-3">
+              <TableBenchmark lignes={lignesDemo} onClickAgence={(id) => navigate(`/agence/${id}`)} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TableBenchmark({
+  lignes,
+  onClickAgence,
+}: {
+  lignes: LigneBenchmark[]
+  onClickAgence: (agenceId: string) => void
+}) {
   return (
     <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-bg-elev">
       <table className="w-full text-sm">
@@ -200,39 +243,39 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
             const ecart = baseline !== null ? ligne.ca - baseline : null
             const ecartPourcent = baseline !== null && baseline !== 0 ? (ecart! / baseline) * 100 : null
             return (
-            <tr
-              key={ligne.agence.id}
-              onClick={() => navigate(`/agence/${ligne.agence.id}`)}
-              className={`cursor-pointer border-b border-l-4 border-line transition-colors duration-150 last:border-0 hover:bg-bg-elev-2 active:bg-bg-elev-2/70 ${
-                ligne.objectifAtteint ? 'border-l-accent-2' : 'border-l-accent-4'
-              }`}
-            >
-              <td className="px-4 py-3">
-                {ligne.agence.nom} <span className="text-text-faint">({ligne.label})</span>
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">{ligne.ventes}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {Math.round(ligne.panierMoyen).toLocaleString('fr-FR')} €
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {Math.round(ligne.honorairesMoyens).toLocaleString('fr-FR')} €
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">{ligne.tauxRotation.toFixed(1)} %</td>
-              <td className="px-4 py-3 text-right tabular-nums">{ligne.mandats}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {ecart === null ? (
-                  <span className="text-text-faint">Baseline non définie</span>
-                ) : (
-                  <span className={ecart >= 0 ? 'text-accent-2' : 'text-accent-3'}>
-                    {ecart >= 0 ? '+' : ''}
-                    {Math.round(ecart).toLocaleString('fr-FR')} €
-                    {ecartPourcent !== null && ` (${ecart >= 0 ? '+' : ''}${ecartPourcent.toFixed(0)} %)`}
-                  </span>
-                )}
-              </td>
-            </tr>
+              <tr
+                key={ligne.agence.id}
+                onClick={() => onClickAgence(ligne.agence.id)}
+                className={`cursor-pointer border-b border-l-4 border-line transition-colors duration-150 last:border-0 hover:bg-bg-elev-2 active:bg-bg-elev-2/70 ${
+                  ligne.objectifAtteint ? 'border-l-accent-2' : 'border-l-accent-4'
+                }`}
+              >
+                <td className="px-4 py-3">
+                  {ligne.agence.nom} <span className="text-text-faint">({ligne.label})</span>
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">{ligne.ventes}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {Math.round(ligne.panierMoyen).toLocaleString('fr-FR')} €
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {Math.round(ligne.honorairesMoyens).toLocaleString('fr-FR')} €
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">{ligne.tauxRotation.toFixed(1)} %</td>
+                <td className="px-4 py-3 text-right tabular-nums">{ligne.mandats}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {ecart === null ? (
+                    <span className="text-text-faint">Baseline non définie</span>
+                  ) : (
+                    <span className={ecart >= 0 ? 'text-accent-2' : 'text-accent-3'}>
+                      {ecart >= 0 ? '+' : ''}
+                      {Math.round(ecart).toLocaleString('fr-FR')} €
+                      {ecartPourcent !== null && ` (${ecart >= 0 ? '+' : ''}${ecartPourcent.toFixed(0)} %)`}
+                    </span>
+                  )}
+                </td>
+              </tr>
             )
           })}
         </tbody>

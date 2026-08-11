@@ -4,17 +4,20 @@ import type { Agence } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
+import { Toggle } from '../../components/ui/Toggle'
 
 function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => void }) {
   const [edition, setEdition] = useState(false)
   const [nom, setNom] = useState(agence.nom)
   const [ville, setVille] = useState(agence.ville ?? '')
+  const [estDemo, setEstDemo] = useState(agence.est_demo)
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
   function annuler() {
     setNom(agence.nom)
     setVille(agence.ville ?? '')
+    setEstDemo(agence.est_demo)
     setErreur(null)
     setEdition(false)
   }
@@ -24,7 +27,7 @@ function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => voi
     setEnvoiEnCours(true)
     const { error } = await supabase
       .from('agences')
-      .update({ nom, ville: ville || null })
+      .update({ nom, ville: ville || null, est_demo: estDemo })
       .eq('id', agence.id)
     setEnvoiEnCours(false)
     if (error) {
@@ -54,6 +57,10 @@ function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => voi
             Annuler
           </Button>
         </div>
+        <label className="flex items-center gap-3 text-sm text-text-dim">
+          <Toggle checked={estDemo} onChange={setEstDemo} label="Agence de démonstration / test" />
+          Agence de démonstration / test — exclue du benchmark inter-agences
+        </label>
         {erreur && <p className="rounded-lg bg-accent-3/15 px-4 py-3 text-sm text-accent-3">{erreur}</p>}
       </div>
     )
@@ -61,7 +68,12 @@ function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => voi
 
   return (
     <div className="flex items-center justify-between border-b border-line pb-2 last:border-0">
-      <span>{agence.nom}</span>
+      <span>
+        {agence.nom}
+        {agence.est_demo && (
+          <span className="ml-2 rounded-full bg-bg-elev-2 px-2 py-0.5 text-xs text-text-faint">Démo/test</span>
+        )}
+      </span>
       <div className="flex items-center gap-3">
         <span className="text-sm text-text-dim">{agence.ville}</span>
         <Button variant="secondary" onClick={() => setEdition(true)}>

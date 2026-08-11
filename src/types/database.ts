@@ -44,6 +44,8 @@ export interface Agence {
   logo_url: string | null
   /** Valeur de départ fixe du CA, saisie une fois — jamais recalculée automatiquement. */
   ca_baseline: number | null
+  /** Compte de démo/test, exclu par défaut du benchmark inter-agences. */
+  est_demo: boolean
   created_at: string
 }
 

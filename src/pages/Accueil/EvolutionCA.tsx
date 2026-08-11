@@ -68,7 +68,7 @@ export function EvolutionCA() {
     const au = `${finMoisCourant.getFullYear()}-${String(finMoisCourant.getMonth() + 1).padStart(2, '0')}-${new Date(finMoisCourant.getFullYear(), finMoisCourant.getMonth() + 1, 0).getDate()}`
 
     Promise.all([
-      supabase.from('agences').select('*').order('nom'),
+      supabase.from('agences').select('*').eq('est_demo', false).order('nom'),
       supabase
         .from('ventes')
         .select('agence_id, date_vente, honoraires_reels, packs_mer(prix), extensions_garantie(prix_client), vente_services(prix)')
