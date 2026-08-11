@@ -14,10 +14,64 @@ interface ComptesProps {
   peutChoisirRole: boolean
 }
 
+function ReinitialiserMotDePasse({ profil, onFermer }: { profil: Profile; onFermer: () => void }) {
+  const [motDePasse, setMotDePasse] = useState('')
+  const [envoiEnCours, setEnvoiEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [reussi, setReussi] = useState(false)
+
+  async function valider() {
+    setErreur(null)
+    setEnvoiEnCours(true)
+    const { data, error } = await supabase.functions.invoke<{ ok?: boolean; error?: string }>(
+      'reset-mot-de-passe',
+      { body: { user_id: profil.id, password: motDePasse } },
+    )
+    setEnvoiEnCours(false)
+    if (error || data?.error) {
+      setErreur(data?.error ?? error?.message ?? 'Erreur lors de la réinitialisation.')
+      return
+    }
+    setReussi(true)
+  }
+
+  if (reussi) {
+    return (
+      <p className="mt-2 text-sm text-accent-2">
+        Nouveau mot de passe enregistré pour {profil.prenom}.{' '}
+        <button type="button" onClick={onFermer} className="underline hover:text-text">
+          Fermer
+        </button>
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <Input
+        type="text"
+        value={motDePasse}
+        onChange={(e) => setMotDePasse(e.target.value)}
+        placeholder="Nouveau mot de passe (8 caractères min.)"
+        minLength={8}
+        className="w-64"
+      />
+      <Button onClick={valider} disabled={envoiEnCours || motDePasse.length < 8}>
+        {envoiEnCours ? 'Enregistrement…' : 'Valider'}
+      </Button>
+      <Button variant="secondary" onClick={onFermer} disabled={envoiEnCours}>
+        Annuler
+      </Button>
+      {erreur && <p className="w-full text-sm text-accent-3">{erreur}</p>}
+    </div>
+  )
+}
+
 export function Comptes({ agenceId, peutChoisirRole }: ComptesProps) {
   const [profils, setProfils] = useState<Profile[]>([])
   const [chargement, setChargement] = useState(true)
   const [formulaireOuvert, setFormulaireOuvert] = useState(false)
+  const [resetOuvertId, setResetOuvertId] = useState<string | null>(null)
 
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
@@ -77,17 +131,33 @@ export function Comptes({ agenceId, peutChoisirRole }: ComptesProps) {
   return (
     <Card className="max-w-2xl">
       <div className="flex flex-col gap-3">
-        {profils.map((p) => (
-          <div key={p.id} className="flex flex-wrap items-center gap-3 border-b border-line pb-3 last:border-0">
-            <span className="min-w-40 flex-1">
-              {p.prenom} {p.nom}
-              <span className="ml-2 text-xs text-text-faint">{ROLE_LABELS[p.role]}</span>
-            </span>
-            {p.role !== 'admin' && (
-              <Toggle checked={p.actif} onChange={() => toggleActif(p)} label={`Actif : ${p.prenom}`} />
-            )}
-          </div>
-        ))}
+        {profils.map((p) => {
+          const peutReinitialiser = p.role !== 'admin' && (peutChoisirRole || p.role === 'commercial')
+          return (
+            <div key={p.id} className="border-b border-line pb-3 last:border-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="min-w-40 flex-1">
+                  {p.prenom} {p.nom}
+                  <span className="ml-2 text-xs text-text-faint">{ROLE_LABELS[p.role]}</span>
+                </span>
+                {peutReinitialiser && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setResetOuvertId(resetOuvertId === p.id ? null : p.id)}
+                  >
+                    Réinitialiser le mot de passe
+                  </Button>
+                )}
+                {p.role !== 'admin' && (
+                  <Toggle checked={p.actif} onChange={() => toggleActif(p)} label={`Actif : ${p.prenom}`} />
+                )}
+              </div>
+              {resetOuvertId === p.id && (
+                <ReinitialiserMotDePasse profil={p} onFermer={() => setResetOuvertId(null)} />
+              )}
+            </div>
+          )
+        })}
         {profils.length === 0 && <p className="text-text-dim">Aucun compte pour l'instant.</p>}
       </div>
 
