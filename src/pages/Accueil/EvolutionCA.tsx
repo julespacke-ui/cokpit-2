@@ -1,0 +1,218 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../../lib/supabase'
+import { calculerPanierVente } from '../../lib/calculs'
+import { couleurSerie } from '../../lib/couleurs'
+import type { Agence } from '../../types/database'
+import { SkeletonCarte } from '../../components/ui/Skeleton'
+
+interface VenteAvecRelations {
+  agence_id: string
+  date_vente: string
+  honoraires_reels: number
+  packs_mer: { prix: number } | null
+  extensions_garantie: { prix_client: number } | null
+  vente_services: { prix: number }[]
+}
+
+interface MoisAxe {
+  cle: string // "YYYY-MM"
+  label: string
+}
+
+interface Serie {
+  agence: Agence
+  couleur: string
+  valeurs: number[] // une valeur par mois de `MOIS_FENETRE`
+}
+
+const NB_MOIS = 12
+const FORMAT_MOIS_COURT = new Intl.DateTimeFormat('fr-FR', { month: 'short', year: '2-digit' })
+
+function derniersMois(nb: number): MoisAxe[] {
+  const mois: MoisAxe[] = []
+  const reference = new Date()
+  reference.setDate(1)
+  for (let i = nb - 1; i >= 0; i--) {
+    const d = new Date(reference.getFullYear(), reference.getMonth() - i, 1)
+    const cle = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    mois.push({ cle, label: FORMAT_MOIS_COURT.format(d).replace('.', '') })
+  }
+  return mois
+}
+
+const LARGEUR = 640
+const HAUTEUR = 260
+const MARGE_GAUCHE = 56
+const MARGE_DROITE = 12
+const MARGE_HAUT = 16
+const MARGE_BAS = 30
+const LARGEUR_TRACE = LARGEUR - MARGE_GAUCHE - MARGE_DROITE
+const HAUTEUR_TRACE = HAUTEUR - MARGE_HAUT - MARGE_BAS
+
+/**
+ * Courbe d'évolution du CA mensuel par agence — réservée à l'admin. Le
+ * toggle ne change que le plancher de l'axe Y (vraie baseline vs zéro) :
+ * les données tracées sont strictement identiques dans les deux modes.
+ */
+export function EvolutionCA() {
+  const [series, setSeries] = useState<Serie[]>([])
+  const [chargement, setChargement] = useState(true)
+  const [axe, setAxe] = useState<'zero' | 'baseline'>('zero')
+
+  const mois = derniersMois(NB_MOIS)
+
+  useEffect(() => {
+    setChargement(true)
+    const du = `${mois[0].cle}-01`
+    const finMoisCourant = new Date()
+    const au = `${finMoisCourant.getFullYear()}-${String(finMoisCourant.getMonth() + 1).padStart(2, '0')}-${new Date(finMoisCourant.getFullYear(), finMoisCourant.getMonth() + 1, 0).getDate()}`
+
+    Promise.all([
+      supabase.from('agences').select('*').order('nom'),
+      supabase
+        .from('ventes')
+        .select('agence_id, date_vente, honoraires_reels, packs_mer(prix), extensions_garantie(prix_client), vente_services(prix)')
+        .gte('date_vente', du)
+        .lte('date_vente', au),
+    ]).then(([agencesRes, ventesRes]) => {
+      const agences = agencesRes.data ?? []
+      const ventes = (ventesRes.data ?? []) as unknown as VenteAvecRelations[]
+
+      const totalParAgenceEtMois = new Map<string, Map<string, number>>()
+      for (const v of ventes) {
+        const cleMois = v.date_vente.slice(0, 7)
+        const panier = calculerPanierVente({
+          honorairesReels: v.honoraires_reels,
+          prixPackMer: v.packs_mer?.prix,
+          prixExtensionGarantie: v.extensions_garantie?.prix_client,
+          services: v.vente_services ?? [],
+        })
+        if (!totalParAgenceEtMois.has(v.agence_id)) totalParAgenceEtMois.set(v.agence_id, new Map())
+        const parMois = totalParAgenceEtMois.get(v.agence_id)!
+        parMois.set(cleMois, (parMois.get(cleMois) ?? 0) + panier)
+      }
+
+      const seriesCalc: Serie[] = agences.map((agence, i) => ({
+        agence,
+        couleur: couleurSerie(i),
+        valeurs: mois.map((m) => totalParAgenceEtMois.get(agence.id)?.get(m.cle) ?? 0),
+      }))
+
+      setSeries(seriesCalc)
+      setChargement(false)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (chargement) return <SkeletonCarte />
+  if (series.length === 0) return null
+
+  const baselinesConfigurees = series.map((s) => s.agence.ca_baseline).filter((b): b is number => b !== null)
+  const plancherBaseline = baselinesConfigurees.length > 0 ? Math.min(...baselinesConfigurees) : 0
+
+  const yMin = axe === 'baseline' ? plancherBaseline : 0
+  const dataMax = Math.max(0, ...series.flatMap((s) => s.valeurs))
+  const yMax = Math.max(dataMax, plancherBaseline, 100) * 1.15
+
+  function x(i: number): number {
+    return MARGE_GAUCHE + (i / (mois.length - 1)) * LARGEUR_TRACE
+  }
+  function y(valeur: number): number {
+    const t = yMax === yMin ? 0 : (valeur - yMin) / (yMax - yMin)
+    return MARGE_HAUT + HAUTEUR_TRACE - t * HAUTEUR_TRACE
+  }
+
+  const ticksY = [0, 0.25, 0.5, 0.75, 1].map((t) => yMin + t * (yMax - yMin))
+
+  return (
+    <div className="animate-pop-in rounded-[var(--radius-card)] border border-line bg-bg-elev p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-heading text-lg">Évolution du CA par agence</h3>
+        <div className="flex gap-1 rounded-lg border border-line bg-bg-elev-2 p-1">
+          <button
+            type="button"
+            onClick={() => setAxe('zero')}
+            className={`rounded-md px-3 py-1.5 text-sm transition-colors duration-150 ${
+              axe === 'zero' ? 'bg-accent-4 text-bg' : 'text-text-dim'
+            }`}
+          >
+            Depuis zéro
+          </button>
+          <button
+            type="button"
+            onClick={() => setAxe('baseline')}
+            disabled={baselinesConfigurees.length === 0}
+            className={`rounded-md px-3 py-1.5 text-sm transition-colors duration-150 disabled:opacity-40 ${
+              axe === 'baseline' ? 'bg-accent-4 text-bg' : 'text-text-dim'
+            }`}
+          >
+            Depuis la baseline
+          </button>
+        </div>
+      </div>
+
+      <svg viewBox={`0 0 ${LARGEUR} ${HAUTEUR}`} className="w-full">
+        {ticksY.map((valeur, i) => (
+          <g key={i}>
+            <line
+              x1={MARGE_GAUCHE}
+              x2={LARGEUR - MARGE_DROITE}
+              y1={y(valeur)}
+              y2={y(valeur)}
+              stroke="var(--line)"
+              strokeWidth={1}
+            />
+            <text x={MARGE_GAUCHE - 8} y={y(valeur) + 3} textAnchor="end" fontSize={9} fill="var(--text-faint)">
+              {Math.round(valeur).toLocaleString('fr-FR')} €
+            </text>
+          </g>
+        ))}
+
+        {mois.map((m, i) => (
+          <text
+            key={m.cle}
+            x={x(i)}
+            y={HAUTEUR - 8}
+            textAnchor="middle"
+            fontSize={9}
+            fill="var(--text-faint)"
+          >
+            {m.label}
+          </text>
+        ))}
+
+        {series.map((serie) => (
+          <g key={serie.agence.id}>
+            <path
+              d={serie.valeurs.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(v)}`).join(' ')}
+              fill="none"
+              stroke={serie.couleur}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {serie.valeurs.map((v, i) => (
+              <circle key={i} cx={x(i)} cy={y(v)} r={2.5} fill={serie.couleur} />
+            ))}
+          </g>
+        ))}
+      </svg>
+
+      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+        {series.map((serie) => (
+          <span key={serie.agence.id} className="flex items-center gap-2 text-sm text-text-dim">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: serie.couleur }} />
+            {serie.agence.nom}
+          </span>
+        ))}
+      </div>
+
+      {axe === 'baseline' && baselinesConfigurees.length < series.length && (
+        <p className="mt-3 text-xs text-text-faint">
+          Certaines agences n'ont pas de baseline définie (Paramètres → Objectifs) — l'axe part de la plus
+          basse baseline connue.
+        </p>
+      )}
+    </div>
+  )
+}

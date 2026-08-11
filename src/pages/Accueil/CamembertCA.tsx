@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { calculerPanierVente } from '../../lib/calculs'
+import { couleurSerie } from '../../lib/couleurs'
 import { SkeletonCarte } from '../../components/ui/Skeleton'
 
 interface VenteAvecRelations {
@@ -18,16 +19,6 @@ interface PartCommercial {
   pourcentage: number
   couleur: string
 }
-
-/** Palette du système de design, cyclée s'il y a plus de commerciaux que de couleurs. */
-const PALETTE = [
-  'var(--accent-1)',
-  'var(--accent-5)',
-  'var(--accent-4)',
-  'var(--accent-2)',
-  'var(--accent-6)',
-  'var(--accent-3)',
-]
 
 /** Camembert de répartition du CA par commercial — autre lecture du même
  * classement, en visuel. Le CA suit la même définition que "panier moyen"
@@ -73,7 +64,7 @@ export function CamembertCA({ agenceId, ventes }: { agenceId: string; ventes: Ve
         nom: `${p.prenom} ${p.nom}`,
         ca,
         pourcentage: totalGeneral > 0 ? (ca / totalGeneral) * 100 : 0,
-        couleur: PALETTE[i % PALETTE.length],
+        couleur: couleurSerie(i),
       }
     })
     .filter((p) => p.ca > 0)

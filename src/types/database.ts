@@ -42,6 +42,8 @@ export interface Agence {
   nom: string
   ville: string | null
   logo_url: string | null
+  /** Valeur de départ fixe du CA, saisie une fois — jamais recalculée automatiquement. */
+  ca_baseline: number | null
   created_at: string
 }
 

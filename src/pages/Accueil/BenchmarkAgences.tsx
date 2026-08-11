@@ -190,10 +190,16 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
             <th className="px-4 py-3 text-right font-normal">Honoraires moyens</th>
             <th className="px-4 py-3 text-right font-normal">Taux de rotation</th>
             <th className="px-4 py-3 text-right font-normal">Mandats</th>
+            <th className="px-4 py-3 text-right font-normal">CA généré</th>
+            <th className="px-4 py-3 text-right font-normal">Évolution vs baseline</th>
           </tr>
         </thead>
         <tbody>
-          {lignes.map((ligne) => (
+          {lignes.map((ligne) => {
+            const baseline = ligne.agence.ca_baseline
+            const ecart = baseline !== null ? ligne.ca - baseline : null
+            const ecartPourcent = baseline !== null && baseline !== 0 ? (ecart! / baseline) * 100 : null
+            return (
             <tr
               key={ligne.agence.id}
               onClick={() => navigate(`/agence/${ligne.agence.id}`)}
@@ -214,8 +220,21 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
               </td>
               <td className="px-4 py-3 text-right tabular-nums">{ligne.tauxRotation.toFixed(1)} %</td>
               <td className="px-4 py-3 text-right tabular-nums">{ligne.mandats}</td>
+              <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>
+              <td className="px-4 py-3 text-right tabular-nums">
+                {ecart === null ? (
+                  <span className="text-text-faint">Baseline non définie</span>
+                ) : (
+                  <span className={ecart >= 0 ? 'text-accent-2' : 'text-accent-3'}>
+                    {ecart >= 0 ? '+' : ''}
+                    {Math.round(ecart).toLocaleString('fr-FR')} €
+                    {ecartPourcent !== null && ` (${ecart >= 0 ? '+' : ''}${ecartPourcent.toFixed(0)} %)`}
+                  </span>
+                )}
+              </td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>

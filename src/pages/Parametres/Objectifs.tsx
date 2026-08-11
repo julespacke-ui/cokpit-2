@@ -67,6 +67,11 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
   const [message, setMessage] = useState<string | null>(null)
   const [enregistrement, setEnregistrement] = useState(false)
 
+  const [baseline, setBaseline] = useState<number | ''>('')
+  const [chargementBaseline, setChargementBaseline] = useState(true)
+  const [enregistrementBaseline, setEnregistrementBaseline] = useState(false)
+  const [messageBaseline, setMessageBaseline] = useState<string | null>(null)
+
   const periode = `${mois}-01`
 
   useEffect(() => {
@@ -96,6 +101,31 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
     })
   }, [agenceId, periode])
 
+  useEffect(() => {
+    setChargementBaseline(true)
+    setMessageBaseline(null)
+    supabase
+      .from('agences')
+      .select('ca_baseline')
+      .eq('id', agenceId)
+      .single()
+      .then(({ data }) => {
+        setBaseline(data?.ca_baseline ?? '')
+        setChargementBaseline(false)
+      })
+  }, [agenceId])
+
+  async function enregistrerBaseline() {
+    setEnregistrementBaseline(true)
+    setMessageBaseline(null)
+    const { error } = await supabase
+      .from('agences')
+      .update({ ca_baseline: baseline === '' ? null : baseline })
+      .eq('id', agenceId)
+    setEnregistrementBaseline(false)
+    setMessageBaseline(error ? `Erreur : ${error.message}` : 'Baseline enregistrée.')
+  }
+
   async function enregistrerAgence() {
     setEnregistrement(true)
     setMessage(null)
@@ -113,10 +143,33 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
     setMessage(error ? `Erreur : ${error.message}` : 'Objectif enregistré.')
   }
 
-  if (chargement) return <Skeleton lignes={4} className="max-w-2xl" />
+  if (chargement || chargementBaseline) return <Skeleton lignes={4} className="max-w-2xl" />
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
+      <Card>
+        <h3 className="mb-1 font-heading text-lg">CA de départ (baseline)</h3>
+        <p className="mb-4 text-sm text-text-dim">
+          Saisie une fois au démarrage de l'accompagnement — sert de repère fixe, jamais recalculé
+          automatiquement. Modifiable en cas d'erreur de saisie.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1.5 block text-sm text-text-dim">CA de départ (€)</label>
+            <Input
+              type="number"
+              value={baseline}
+              onChange={(e) => setBaseline(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-48"
+            />
+          </div>
+          <Button onClick={enregistrerBaseline} disabled={enregistrementBaseline}>
+            {enregistrementBaseline ? 'Enregistrement…' : 'Enregistrer'}
+          </Button>
+        </div>
+        {messageBaseline && <p className="mt-3 text-sm text-text-dim">{messageBaseline}</p>}
+      </Card>
+
       <div>
         <label className="mb-1.5 block text-sm text-text-dim">Mois</label>
         <input

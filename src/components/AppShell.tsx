@@ -109,7 +109,7 @@ export function AppShell() {
         </button>
       </header>
 
-      <main className="flex-1 pb-20 md:pb-0">
+      <main className="min-w-0 flex-1 pb-20 md:pb-0">
         <div key={location.pathname} className="animate-page-in">
           <Outlet />
         </div>

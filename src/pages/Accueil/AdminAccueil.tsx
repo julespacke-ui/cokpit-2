@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { PeriodeSelector, type PlagePeriode } from './PeriodeSelector'
 import { BenchmarkAgences } from './BenchmarkAgences'
+import { EvolutionCA } from './EvolutionCA'
 
 export function AdminAccueil() {
   const { profile } = useAuth()
@@ -20,6 +21,10 @@ export function AdminAccueil() {
       </div>
 
       {plage && <BenchmarkAgences du={plage.du} au={plage.au} />}
+
+      <div className="mt-8">
+        <EvolutionCA />
+      </div>
     </div>
   )
 }
