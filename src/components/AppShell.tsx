@@ -16,6 +16,8 @@ import type { Role } from '../types/database'
 interface NavItem {
   to: string
   label: string
+  /** Libellé plus court pour la barre d'onglets mobile (6 items sur peu de place) — évite un retour à la ligne isolé. */
+  labelCourt?: string
   icon: typeof Home
   roles: Role[]
 }
@@ -24,7 +26,13 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Accueil', icon: Home, roles: ['admin', 'gerant', 'commercial'] },
   { to: '/ma-semaine', label: 'Ma semaine', icon: CalendarDays, roles: ['gerant', 'commercial'] },
   { to: '/ventes', label: 'Ventes', icon: Car, roles: ['gerant', 'commercial'] },
-  { to: '/plan-action', label: "Plan d'action", icon: ClipboardList, roles: ['admin', 'gerant', 'commercial'] },
+  {
+    to: '/plan-action',
+    label: "Plan d'action",
+    labelCourt: 'Plan',
+    icon: ClipboardList,
+    roles: ['admin', 'gerant', 'commercial'],
+  },
   { to: '/ressources', label: 'Ressources', icon: FolderOpen, roles: ['admin', 'gerant', 'commercial'] },
   { to: '/parametres', label: 'Paramètres', icon: Settings, roles: ['admin', 'gerant'] },
   { to: '/audit', label: 'Audit', icon: ClipboardCheck, roles: ['admin'] },
@@ -116,19 +124,19 @@ export function AppShell() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-bg-elev md:hidden">
-        {itemsVisibles.map(({ to, label, icon: Icon }) => (
+        {itemsVisibles.map(({ to, label, labelCourt, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-colors duration-150 ${
+              `flex flex-1 flex-col items-center gap-1 whitespace-nowrap py-2.5 text-[11px] transition-colors duration-150 ${
                 isActive ? 'text-accent-4' : 'text-text-dim'
               }`
             }
           >
             <Icon size={20} />
-            {label}
+            {labelCourt ?? label}
           </NavLink>
         ))}
       </nav>

@@ -191,7 +191,7 @@ export function CommercialAccueil() {
           <PeriodeSelector onChange={setPlage} />
         </div>
         {chargementIndicateurs || !agregatPeriode ? (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {Array.from({ length: 10 }).map((_, i) => (
               <SkeletonCarte key={i} className="p-2.5" />
             ))}

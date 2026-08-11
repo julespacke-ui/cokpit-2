@@ -125,7 +125,7 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId }: TableauBord
 
       {chargement || !agregat ? (
         <div className="flex flex-col gap-8">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <SkeletonCarte />
             <SkeletonCarte />
             <SkeletonCarte />
@@ -134,7 +134,7 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId }: TableauBord
         </div>
       ) : (
         <div className="animate-page-in">
-          <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <StatMiseEnAvant label="Chiffre d'affaires TTC" valeur={chiffreAffaires(paniers)} unite=" €" />
             <StatMiseEnAvant label="Panier moyen TTC" valeur={panierMoyen(paniers)} unite=" €" />
             <StatMiseEnAvant label="Honoraires moyens" valeur={honorairesMoyens(ventes)} unite=" €" />

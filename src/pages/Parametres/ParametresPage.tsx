@@ -58,7 +58,10 @@ export function ParametresPage() {
     <div className="p-4 md:p-8">
       <h2 className="mb-4 font-heading text-2xl">Paramètres</h2>
 
-      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
+      {/* flex-wrap plutôt que overflow-x-auto : sur mobile, mieux vaut deux
+          lignes d'onglets entièrement visibles qu'une scrollbar cachée sans
+          indice qu'il y a plus de contenu à droite. */}
+      <div className="mb-6 flex flex-wrap gap-x-1 gap-y-2 border-b border-line">
         {onglets.map((o) => (
           <button
             key={o.id}
