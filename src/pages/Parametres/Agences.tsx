@@ -68,12 +68,7 @@ function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => voi
 
   return (
     <div className="flex items-center justify-between border-b border-line pb-2 last:border-0">
-      <span>
-        {agence.nom}
-        {agence.est_demo && (
-          <span className="ml-2 rounded-full bg-bg-elev-2 px-2 py-0.5 text-xs text-text-faint">Démo/test</span>
-        )}
-      </span>
+      <span>{agence.nom}</span>
       <div className="flex items-center gap-3">
         <span className="text-sm text-text-dim">{agence.ville}</span>
         <Button variant="secondary" onClick={() => setEdition(true)}>
@@ -89,6 +84,7 @@ export function Agences({ agences, onChange }: { agences: Agence[]; onChange: ()
   const [ville, setVille] = useState('')
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [demoOuvert, setDemoOuvert] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -105,16 +101,39 @@ export function Agences({ agences, onChange }: { agences: Agence[]; onChange: ()
     onChange()
   }
 
+  const agencesReelles = agences.filter((a) => !a.est_demo)
+  const agencesDemo = agences.filter((a) => a.est_demo)
+
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <Card>
         <h3 className="mb-4 font-heading text-lg">Agences existantes</h3>
         <div className="flex flex-col gap-3">
-          {agences.map((a) => (
+          {agencesReelles.map((a) => (
             <LigneAgence key={a.id} agence={a} onChange={onChange} />
           ))}
-          {agences.length === 0 && <p className="text-text-dim">Aucune agence pour l'instant.</p>}
+          {agencesReelles.length === 0 && <p className="text-text-dim">Aucune agence pour l'instant.</p>}
         </div>
+
+        {agencesDemo.length > 0 && (
+          <div className="mt-4 border-t border-line pt-4">
+            <button
+              type="button"
+              onClick={() => setDemoOuvert((v) => !v)}
+              className="flex w-full items-center justify-between text-left text-sm text-text-dim transition-colors duration-150 hover:text-text"
+            >
+              <span>Agences de démonstration / test ({agencesDemo.length})</span>
+              <span className="text-text-faint">{demoOuvert ? '▲' : '▼'}</span>
+            </button>
+            {demoOuvert && (
+              <div className="animate-page-in mt-3 flex flex-col gap-3">
+                {agencesDemo.map((a) => (
+                  <LigneAgence key={a.id} agence={a} onChange={onChange} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       <Card>
