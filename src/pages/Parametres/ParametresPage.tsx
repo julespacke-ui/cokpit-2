@@ -10,6 +10,7 @@ import { Comptes } from './Comptes'
 import { Objectifs } from './Objectifs'
 import { PlansAction } from './PlansAction'
 import { Ressources } from './Ressources'
+import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
 
 type Onglet = 'agences' | 'bareme' | 'packs' | 'extensions' | 'comptes' | 'objectifs' | 'plans_action' | 'ressources'
 
@@ -79,17 +80,7 @@ export function ParametresPage() {
       {estAdmin && onglet !== 'agences' && (
         <div className="mb-6 flex items-center gap-3">
           <label className="text-sm text-text-dim">Agence :</label>
-          <select
-            value={agenceSelectionneeId}
-            onChange={(e) => setAgenceSelectionneeId(e.target.value)}
-            className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text"
-          >
-            {agences.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nom}
-              </option>
-            ))}
-          </select>
+          <SelecteurAgence agences={agences} value={agenceSelectionneeId} onChange={setAgenceSelectionneeId} />
         </div>
       )}
 

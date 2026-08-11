@@ -9,6 +9,7 @@ import {
 } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
 
 function estHtml(storagePath: string): boolean {
   return storagePath.toLowerCase().endsWith('.html')
@@ -166,17 +167,7 @@ export function RessourcesPage() {
       {estAdmin && (
         <div className="mb-6 flex items-center gap-3">
           <label className="text-sm text-text-dim">Agence :</label>
-          <select
-            value={agenceSelectionneeId}
-            onChange={(e) => setAgenceSelectionneeId(e.target.value)}
-            className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text"
-          >
-            {agences.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nom}
-              </option>
-            ))}
-          </select>
+          <SelecteurAgence agences={agences} value={agenceSelectionneeId} onChange={setAgenceSelectionneeId} />
         </div>
       )}
 

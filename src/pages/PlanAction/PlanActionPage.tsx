@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import type { Agence } from '../../types/database'
+import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
 import { PlanActionCommercial } from './PlanActionCommercial'
 import { PlanActionListe } from './PlanActionListe'
 
@@ -38,17 +39,7 @@ export function PlanActionPage() {
         <>
           <div className="mb-4 flex items-center gap-3">
             <label className="text-sm text-text-dim">Agence :</label>
-            <select
-              value={agenceSelectionneeId}
-              onChange={(e) => setAgenceSelectionneeId(e.target.value)}
-              className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text"
-            >
-              {agences.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nom}
-                </option>
-              ))}
-            </select>
+            <SelecteurAgence agences={agences} value={agenceSelectionneeId} onChange={setAgenceSelectionneeId} />
           </div>
           {agenceSelectionneeId && <PlanActionListe agenceId={agenceSelectionneeId} />}
         </>
