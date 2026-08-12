@@ -58,6 +58,8 @@ export function EvolutionCA() {
   const [series, setSeries] = useState<Serie[]>([])
   const [chargement, setChargement] = useState(true)
   const [axe, setAxe] = useState<'zero' | 'baseline'>('zero')
+  const [tri, setTri] = useState<'nom' | 'ca'>('ca')
+  const [nombreAffiche, setNombreAffiche] = useState<number | 'toutes'>('toutes')
 
   const mois = derniersMois(NB_MOIS)
 
@@ -107,11 +109,24 @@ export function EvolutionCA() {
   if (chargement) return <SkeletonCarte />
   if (series.length === 0) return null
 
-  const baselinesConfigurees = series.map((s) => s.agence.ca_baseline).filter((b): b is number => b !== null)
+  // Trie sur le total CA de la fenêtre affichée (12 derniers mois), pas sur
+  // un seul mois — plus représentatif pour choisir "les N plus grosses".
+  const seriesTriees = [...series].sort((a, b) => {
+    if (tri === 'nom') return a.agence.nom.localeCompare(b.agence.nom)
+    const totalA = a.valeurs.reduce((s, v) => s + v, 0)
+    const totalB = b.valeurs.reduce((s, v) => s + v, 0)
+    return totalB - totalA
+  })
+  const seriesAffichees =
+    nombreAffiche === 'toutes' ? seriesTriees : seriesTriees.slice(0, nombreAffiche)
+
+  const baselinesConfigurees = seriesAffichees
+    .map((s) => s.agence.ca_baseline)
+    .filter((b): b is number => b !== null)
   const plancherBaseline = baselinesConfigurees.length > 0 ? Math.min(...baselinesConfigurees) : 0
 
   const yMin = axe === 'baseline' ? plancherBaseline : 0
-  const dataMax = Math.max(0, ...series.flatMap((s) => s.valeurs))
+  const dataMax = Math.max(0, ...seriesAffichees.flatMap((s) => s.valeurs))
   const yMax = Math.max(dataMax, plancherBaseline, 100) * 1.15
 
   function x(i: number): number {
@@ -151,6 +166,32 @@ export function EvolutionCA() {
         </div>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <label className="text-sm text-text-dim">Trier par :</label>
+        <select
+          value={tri}
+          onChange={(e) => setTri(e.target.value as 'nom' | 'ca')}
+          className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text"
+        >
+          <option value="ca">CA (décroissant)</option>
+          <option value="nom">Nom (A→Z)</option>
+        </select>
+
+        <label className="ml-2 text-sm text-text-dim">Nombre d'agences :</label>
+        <select
+          value={nombreAffiche}
+          onChange={(e) => setNombreAffiche(e.target.value === 'toutes' ? 'toutes' : Number(e.target.value))}
+          className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text"
+        >
+          <option value="toutes">Toutes ({series.length})</option>
+          {Array.from({ length: series.length }, (_, i) => i + 1).map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <svg viewBox={`0 0 ${LARGEUR} ${HAUTEUR}`} className="w-full">
         {ticksY.map((valeur, i) => (
           <g key={i}>
@@ -181,7 +222,7 @@ export function EvolutionCA() {
           </text>
         ))}
 
-        {series.map((serie) => (
+        {seriesAffichees.map((serie) => (
           <g key={serie.agence.id}>
             <path
               d={serie.valeurs.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(v)}`).join(' ')}
@@ -199,7 +240,7 @@ export function EvolutionCA() {
       </svg>
 
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
-        {series.map((serie) => (
+        {seriesAffichees.map((serie) => (
           <span key={serie.agence.id} className="flex items-center gap-2 text-sm text-text-dim">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: serie.couleur }} />
             {serie.agence.nom}
@@ -207,7 +248,7 @@ export function EvolutionCA() {
         ))}
       </div>
 
-      {axe === 'baseline' && baselinesConfigurees.length < series.length && (
+      {axe === 'baseline' && baselinesConfigurees.length < seriesAffichees.length && (
         <p className="mt-3 text-xs text-text-faint">
           Certaines agences n'ont pas de baseline définie (Paramètres → Objectifs) — l'axe part de la plus
           basse baseline connue.
