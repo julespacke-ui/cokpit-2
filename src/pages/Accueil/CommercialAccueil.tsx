@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { agregerSaisies, calculerPanierVente, type AgregatSaisies } from '../../lib/calculs'
 import { calculerPeriode, toISODate } from '../../lib/periodes'
-import type { Objectif, SaisieHebdo } from '../../types/database'
+import type { Objectif, Profile, SaisieHebdo } from '../../types/database'
 import { JaugeObjectif } from './JaugeObjectif'
 import { IndicateursKpi } from './IndicateursKpi'
 import { ClassementAgence } from './ClassementAgence'
@@ -30,8 +29,7 @@ const CIBLES_LABELS: Record<string, { label: string; unite?: string }> = {
   videos: { label: 'Vidéos' },
 }
 
-export function CommercialAccueil() {
-  const { profile } = useAuth()
+export function CommercialAccueil({ profile }: { profile: Profile }) {
   const [cibles, setCibles] = useState<Record<string, number>>({})
   const [valeursMois, setValeursMois] = useState<Record<string, number>>({})
   const [chargementObjectifs, setChargementObjectifs] = useState(true)
@@ -46,7 +44,6 @@ export function CommercialAccueil() {
   // Objectifs du mois : toujours le mois calendaire en cours, indépendant du
   // sélecteur de période utilisé pour les indicateurs ci-dessous.
   useEffect(() => {
-    if (!profile) return
     const periodeMois = calculerPeriode('mois', new Date())
     const debutMois = toISODate(periodeMois.debut)
     const finMois = toISODate(periodeMois.fin)
@@ -96,7 +93,7 @@ export function CommercialAccueil() {
 
   // Indicateurs calculés sur la période choisie via le sélecteur
   useEffect(() => {
-    if (!profile || !plage) return
+    if (!plage) return
     setChargementIndicateurs(true)
 
     Promise.all([
@@ -140,8 +137,6 @@ export function CommercialAccueil() {
       setChargementIndicateurs(false)
     })
   }, [profile, plage])
-
-  if (!profile) return null
 
   return (
     <div className="p-4 md:p-8">

@@ -251,7 +251,8 @@ function TableBenchmark({
                 }`}
               >
                 <td className="px-4 py-3">
-                  {ligne.agence.nom} <span className="text-text-faint">({ligne.label})</span>
+                  {ligne.agence.nom}
+                  {ligne.agence.ville && <span className="text-text-faint"> ({ligne.agence.ville})</span>}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">{ligne.ventes}</td>
                 <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>

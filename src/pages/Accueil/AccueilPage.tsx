@@ -7,7 +7,7 @@ export function AccueilPage() {
   const { profile } = useAuth()
   if (!profile) return null
 
-  if (profile.role === 'commercial') return <CommercialAccueil />
+  if (profile.role === 'commercial') return <CommercialAccueil profile={profile} />
   if (profile.role === 'gerant') return <GerantAccueil />
   return <AdminAccueil />
 }
