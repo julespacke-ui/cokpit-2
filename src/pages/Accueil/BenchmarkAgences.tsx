@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import {
   agregerSaisies,
@@ -250,10 +251,6 @@ function TableBenchmark({
 }) {
   const [tri, setTri] = useState<{ cle: CleColonneTriable; sens: 'desc' | 'asc' } | null>(null)
 
-  function basculerTri(cle: CleColonneTriable) {
-    setTri((t) => (t?.cle === cle ? { cle, sens: t.sens === 'desc' ? 'asc' : 'desc' } : { cle, sens: 'desc' }))
-  }
-
   const lignesAffichees = tri
     ? [...lignes].sort((a, b) => {
         const extraire = EXTRACTEURS_TRI[tri.cle]
@@ -268,26 +265,56 @@ function TableBenchmark({
     : lignes
 
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-bg-elev">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-line text-left text-text-dim">
-            <th className="px-4 py-3 font-normal">Agence</th>
-            {COLONNES.map((col) => (
-              <th key={col.cle} className="px-4 py-3 text-right font-normal">
-                <button
-                  type="button"
-                  onClick={() => basculerTri(col.cle)}
-                  className="inline-flex items-center gap-1 whitespace-nowrap transition-colors duration-150 hover:text-text"
-                  title={`Trier par ${col.label} (meilleurs en premier)`}
-                >
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <ArrowUpDown size={14} className="text-text-faint" />
+        <label className="text-sm text-text-dim">Trier par :</label>
+        <select
+          value={tri?.cle ?? ''}
+          onChange={(e) => {
+            const cle = e.target.value as CleColonneTriable | ''
+            setTri(cle ? { cle, sens: tri?.sens ?? 'desc' } : null)
+          }}
+          className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text"
+        >
+          <option value="">Par défaut</option>
+          {COLONNES.map((col) => (
+            <option key={col.cle} value={col.cle}>
+              {col.label}
+            </option>
+          ))}
+        </select>
+        {tri && (
+          <button
+            type="button"
+            onClick={() => setTri((t) => t && { ...t, sens: t.sens === 'desc' ? 'asc' : 'desc' })}
+            className="flex items-center gap-1.5 rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text transition-colors duration-150 hover:bg-line"
+          >
+            {tri.sens === 'desc' ? (
+              <>
+                <ArrowDown size={14} /> Décroissant
+              </>
+            ) : (
+              <>
+                <ArrowUp size={14} /> Croissant
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
+      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-bg-elev">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-text-dim">
+              <th className="px-4 py-3 font-normal">Agence</th>
+              {COLONNES.map((col) => (
+                <th key={col.cle} className="px-4 py-3 text-right font-normal">
                   {col.label}
-                  <span className="text-text-faint">{tri?.cle === col.cle ? (tri.sens === 'desc' ? '▼' : '▲') : ''}</span>
-                </button>
-              </th>
-            ))}
-          </tr>
-        </thead>
+                </th>
+              ))}
+            </tr>
+          </thead>
         <tbody>
           {lignesAffichees.map((ligne) => {
             const baseline = ligne.agence.ca_baseline
@@ -330,8 +357,9 @@ function TableBenchmark({
               </tr>
             )
           })}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

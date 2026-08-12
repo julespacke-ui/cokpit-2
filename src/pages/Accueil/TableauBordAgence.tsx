@@ -45,6 +45,8 @@ interface TableauBordAgenceProps {
   agenceId: string
   /** Surligne la ligne de l'utilisateur dans "Détail par commercial" (omis en vue admin). */
   utilisateurActuelId?: string
+  /** Clic sur une ligne de "Détail par commercial" pour ouvrir la vue personnelle de ce commercial. */
+  onClickCommercial?: (id: string) => void
 }
 
 /**
@@ -53,7 +55,7 @@ interface TableauBordAgenceProps {
  * pour l'Accueil du gérant (sa propre agence) et pour le drill-down admin
  * depuis le Benchmark inter-agences (n'importe quelle agence).
  */
-export function TableauBordAgence({ agenceId, utilisateurActuelId }: TableauBordAgenceProps) {
+export function TableauBordAgence({ agenceId, utilisateurActuelId, onClickCommercial }: TableauBordAgenceProps) {
   const [plage, setPlage] = useState<PlagePeriode | null>(null)
   const [agregat, setAgregat] = useState<AgregatSaisies | null>(null)
   const [ventes, setVentes] = useState<VenteAvecRelations[]>([])
@@ -149,6 +151,7 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId }: TableauBord
                   du={plage.du}
                   au={plage.au}
                   utilisateurActuelId={utilisateurActuelId}
+                  onClickCommercial={onClickCommercial}
                 />
                 <CamembertCA agenceId={agenceId} ventes={ventes} />
               </div>

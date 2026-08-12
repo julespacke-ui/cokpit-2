@@ -15,9 +15,11 @@ interface ClassementAgenceProps {
   du: string
   au: string
   utilisateurActuelId?: string
+  /** Rend chaque ligne cliquable pour ouvrir la vue personnelle de ce commercial. */
+  onClickCommercial?: (id: string) => void
 }
 
-export function ClassementAgence({ agenceId, du, au, utilisateurActuelId }: ClassementAgenceProps) {
+export function ClassementAgence({ agenceId, du, au, utilisateurActuelId, onClickCommercial }: ClassementAgenceProps) {
   const [lignes, setLignes] = useState<LigneClassement[]>([])
   const [chargement, setChargement] = useState(true)
 
@@ -88,7 +90,10 @@ export function ClassementAgence({ agenceId, du, au, utilisateurActuelId }: Clas
           {lignes.map((ligne, i) => (
             <tr
               key={ligne.id}
-              className={`border-b border-line last:border-0 ${ligne.id === utilisateurActuelId ? 'bg-accent-1/10' : ''}`}
+              onClick={onClickCommercial ? () => onClickCommercial(ligne.id) : undefined}
+              className={`border-b border-line transition-colors duration-150 last:border-b-0 ${
+                onClickCommercial ? 'cursor-pointer hover:bg-bg-elev-2 active:bg-bg-elev-2/70' : ''
+              } ${ligne.id === utilisateurActuelId ? 'bg-accent-1/10' : ''}`}
             >
               <td className="px-4 py-3 text-text-dim">{i + 1}</td>
               <td className="px-4 py-3">{ligne.nom}</td>
