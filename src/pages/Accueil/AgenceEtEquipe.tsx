@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import type { Profile } from '../../types/database'
 import { TableauBordAgence } from './TableauBordAgence'
 import { CommercialAccueil } from './CommercialAccueil'
+import { MaSemaine } from '../MaSemaine'
 import { Skeleton } from '../../components/ui/Skeleton'
 
 /**
@@ -76,6 +77,9 @@ export function AgenceEtEquipe({
         // base) : on annule celui du conteneur parent pour ne pas le cumuler.
         <div key={profilVue.id} className="animate-page-in -mx-4 md:-mx-8">
           <CommercialAccueil profile={profilVue} />
+          <div className="border-t border-line">
+            <MaSemaine profil={profilVue} lectureSeule />
+          </div>
         </div>
       ) : (
         <div className="animate-page-in">

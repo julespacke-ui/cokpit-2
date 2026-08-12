@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Users, Car, Video, Repeat, Package, Star, Link2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import type { SaisieHebdo } from '../types/database'
+import type { Profile, SaisieHebdo } from '../types/database'
 import { Button } from '../components/ui/Button'
 import { ToggleVisuel } from '../components/ui/Toggle'
 import { SkeletonCarte } from '../components/ui/Skeleton'
@@ -128,11 +128,13 @@ function ChampNombre({
   valeur,
   onChange,
   couleur,
+  lectureSeule,
 }: {
   label: string
   valeur: number
   onChange: (v: number) => void
   couleur?: CouleurBloc
+  lectureSeule?: boolean
 }) {
   return (
     // h-full + justify-between : le chiffre se cale en bas de la cellule, donc
@@ -140,16 +142,22 @@ function ChampNombre({
     // lignes (ex. « Sorties (livraisons) »).
     <div className="flex h-full flex-col justify-between">
       <p className="mb-1 text-xs text-text-dim">{label}</p>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={0}
-        value={valeur}
-        onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-        className={`-mx-1 w-[calc(100%+0.5rem)] rounded-md bg-transparent px-1 font-heading text-2xl tabular-nums outline-none transition-colors focus:bg-bg-elev-2 ${
-          couleur ? COULEURS_BLOC[couleur].texte : 'text-text'
-        }`}
-      />
+      {lectureSeule ? (
+        <p className={`font-heading text-2xl tabular-nums ${couleur ? COULEURS_BLOC[couleur].texte : 'text-text'}`}>
+          {valeur}
+        </p>
+      ) : (
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={valeur}
+          onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+          className={`-mx-1 w-[calc(100%+0.5rem)] rounded-md bg-transparent px-1 font-heading text-2xl tabular-nums outline-none transition-colors focus:bg-bg-elev-2 ${
+            couleur ? COULEURS_BLOC[couleur].texte : 'text-text'
+          }`}
+        />
+      )}
     </div>
   )
 }
@@ -159,11 +167,21 @@ function LigneRoutine({
   label,
   checked,
   onChange,
+  lectureSeule,
 }: {
   label: string
   checked: boolean
   onChange: (valeur: boolean) => void
+  lectureSeule?: boolean
 }) {
+  if (lectureSeule) {
+    return (
+      <div className="-mx-2 flex items-center justify-between gap-4 rounded-lg px-2 py-1.5">
+        <span className={`text-sm ${checked ? 'text-text' : 'text-text-dim'}`}>{label}</span>
+        <ToggleVisuel checked={checked} />
+      </div>
+    )
+  }
   return (
     <button
       type="button"
@@ -193,8 +211,9 @@ function StatAuto({ label, valeur, couleur }: { label: string; valeur: number; c
   )
 }
 
-export function MaSemaine() {
-  const { profile } = useAuth()
+export function MaSemaine({ profil, lectureSeule = false }: { profil?: Profile; lectureSeule?: boolean } = {}) {
+  const { profile: profilConnecte } = useAuth()
+  const profile = profil ?? profilConnecte
   const [lundi, setLundi] = useState(() => lundiDeLaSemaine(new Date()))
   const [champs, setChamps] = useState<ChampsSaisie>(VALEURS_INITIALES)
   const [stockPrecedent, setStockPrecedent] = useState<number | null>(null)
@@ -291,10 +310,10 @@ export function MaSemaine() {
   }
 
   return (
-    <div className="p-4 pb-24 md:p-8">
+    <div className={lectureSeule ? 'p-4 md:p-8' : 'p-4 pb-24 md:p-8'}>
       <div className="mb-2 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="font-heading text-2xl">Ma semaine</h2>
+          <h2 className="font-heading text-2xl">{lectureSeule ? `Semaine de ${profile.prenom}` : 'Ma semaine'}</h2>
           <p className="text-sm text-text-dim">Semaine du {FORMAT_SEMAINE.format(lundi)}</p>
         </div>
         <div className="w-full max-w-56">
@@ -343,24 +362,30 @@ export function MaSemaine() {
                   label="Appels"
                   valeur={champs.appels_passes}
                   onChange={(v) => modifier('appels_passes', v)}
+                  lectureSeule={lectureSeule}
                 />
                 <ChampNombre
                   label="Leads traités"
                   valeur={champs.leads_traites}
                   onChange={(v) => modifier('leads_traites', v)}
+                  lectureSeule={lectureSeule}
                 />
-                <ChampNombre label="RDV pris" valeur={champs.rdv_pris} onChange={(v) => modifier('rdv_pris', v)} />
+                <ChampNombre label="RDV pris" valeur={champs.rdv_pris} onChange={(v) => modifier('rdv_pris', v)}
+                  lectureSeule={lectureSeule}
+                />
                 <ChampNombre
                   label="RDV venus"
                   valeur={champs.rdv_venus}
                   onChange={(v) => modifier('rdv_venus', v)}
                   couleur="cyan"
+                  lectureSeule={lectureSeule}
                 />
                 <ChampNombre
                   label="Mandats"
                   valeur={champs.mandats_rentres}
                   onChange={(v) => modifier('mandats_rentres', v)}
                   couleur="vert"
+                  lectureSeule={lectureSeule}
                 />
               </div>
             </BlocCard>
@@ -371,17 +396,20 @@ export function MaSemaine() {
                   label="Leads"
                   valeur={champs.leads_acheteurs}
                   onChange={(v) => modifier('leads_acheteurs', v)}
+                  lectureSeule={lectureSeule}
                 />
                 <ChampNombre
                   label="Propositions"
                   valeur={champs.propositions_commerciales}
                   onChange={(v) => modifier('propositions_commerciales', v)}
+                  lectureSeule={lectureSeule}
                 />
                 <ChampNombre
                   label="Visites"
                   valeur={champs.visites}
                   onChange={(v) => modifier('visites', v)}
                   couleur="cyan"
+                  lectureSeule={lectureSeule}
                 />
                 <StatAuto label="Ventes" valeur={ventesSemaine} couleur="vert" />
               </div>
@@ -395,11 +423,13 @@ export function MaSemaine() {
                   label="Vidéos postées"
                   valeur={champs.videos_postees}
                   onChange={(v) => modifier('videos_postees', v)}
+                  lectureSeule={lectureSeule}
                 />
                 <ChampNombre
                   label="Prospections"
                   valeur={champs.prospections_exterieures}
                   onChange={(v) => modifier('prospections_exterieures', v)}
+                  lectureSeule={lectureSeule}
                 />
               </div>
             </BlocCard>
@@ -410,16 +440,19 @@ export function MaSemaine() {
                   label="Liste chaude levée"
                   checked={champs.liste_chaude_levee}
                   onChange={(v) => modifier('liste_chaude_levee', v)}
+                  lectureSeule={lectureSeule}
                 />
                 <LigneRoutine
                   label="Sortie prospection"
                   checked={champs.sortie_prospection_faite}
                   onChange={(v) => modifier('sortie_prospection_faite', v)}
+                  lectureSeule={lectureSeule}
                 />
                 <LigneRoutine
                   label="Vidéos publiées"
                   checked={champs.videos_prevues_publiees}
                   onChange={(v) => modifier('videos_prevues_publiees', v)}
+                  lectureSeule={lectureSeule}
                 />
               </div>
             </BlocCard>
@@ -444,17 +477,20 @@ export function MaSemaine() {
                   valeur={champs.stock_entrees}
                   onChange={(v) => modifier('stock_entrees', v)}
                   couleur="vert"
+                  lectureSeule={lectureSeule}
                 />
                 <ChampNombre
                   label="Sorties (livraisons)"
                   valeur={champs.stock_sorties}
                   onChange={(v) => modifier('stock_sorties', v)}
                   couleur="rouge"
+                  lectureSeule={lectureSeule}
                 />
                 <ChampNombre
                   label="Total déclaré"
                   valeur={champs.stock_total}
                   onChange={(v) => modifier('stock_total', v)}
+                  lectureSeule={lectureSeule}
                 />
               </div>
               {ecartDetecte && (
@@ -471,20 +507,24 @@ export function MaSemaine() {
                   label="Avis Google reçus"
                   valeur={champs.nb_avis_recus}
                   onChange={(v) => modifier('nb_avis_recus', v)}
+                  lectureSeule={lectureSeule}
                 />
               </div>
             </BlocCard>
           </div>
 
-          {erreur && <p className="rounded-lg bg-accent-3/15 px-4 py-3 text-sm text-accent-3">{erreur}</p>}
-
-          <Button onClick={enregistrer} disabled={enregistrement} className="self-start">
-            {enregistrement ? 'Enregistrement…' : 'Enregistrer'}
-          </Button>
+          {!lectureSeule && (
+            <>
+              {erreur && <p className="rounded-lg bg-accent-3/15 px-4 py-3 text-sm text-accent-3">{erreur}</p>}
+              <Button onClick={enregistrer} disabled={enregistrement} className="self-start">
+                {enregistrement ? 'Enregistrement…' : 'Enregistrer'}
+              </Button>
+            </>
+          )}
         </div>
       )}
 
-      <Toast message={toast.message} cle={toast.cle} onFermer={toast.fermer} />
+      {!lectureSeule && <Toast message={toast.message} cle={toast.cle} onFermer={toast.fermer} />}
     </div>
   )
 }
