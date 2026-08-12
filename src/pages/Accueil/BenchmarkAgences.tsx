@@ -246,7 +246,7 @@ function TableBenchmark({
               <tr
                 key={ligne.agence.id}
                 onClick={() => onClickAgence(ligne.agence.id)}
-                className={`cursor-pointer border-b border-l-4 border-line transition-colors duration-150 last:border-0 hover:bg-bg-elev-2 active:bg-bg-elev-2/70 ${
+                className={`cursor-pointer border-b border-l-4 border-line transition-colors duration-150 last:border-b-0 hover:bg-bg-elev-2 active:bg-bg-elev-2/70 ${
                   ligne.objectifAtteint ? 'border-l-accent-2' : 'border-l-accent-4'
                 }`}
               >

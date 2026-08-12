@@ -6,6 +6,98 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 
+function LigneRessource({ ressource, onChange }: { ressource: Ressource; onChange: () => void }) {
+  const [edition, setEdition] = useState(false)
+  const [libelle, setLibelle] = useState(ressource.libelle)
+  const [categorie, setCategorie] = useState(ressource.categorie)
+  const [envoiEnCours, setEnvoiEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  function annuler() {
+    setLibelle(ressource.libelle)
+    setCategorie(ressource.categorie)
+    setErreur(null)
+    setEdition(false)
+  }
+
+  async function enregistrer() {
+    if (!libelle) {
+      setErreur('Le libellé est obligatoire.')
+      return
+    }
+    setErreur(null)
+    setEnvoiEnCours(true)
+    const { error } = await supabase.from('ressources').update({ libelle, categorie }).eq('id', ressource.id)
+    setEnvoiEnCours(false)
+    if (error) {
+      setErreur(error.message)
+      return
+    }
+    setEdition(false)
+    onChange()
+  }
+
+  async function supprimer() {
+    if (ressource.storage_path) {
+      await supabase.storage.from('ressources').remove([ressource.storage_path])
+    }
+    await supabase.from('ressources').delete().eq('id', ressource.id)
+    onChange()
+  }
+
+  if (edition) {
+    return (
+      <div className="flex flex-col gap-2 border-b border-line pb-3 last:border-0">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-40 flex-1">
+            <label className="mb-1.5 block text-sm text-text-dim">Libellé</label>
+            <Input value={libelle} onChange={(e) => setLibelle(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm text-text-dim">Catégorie</label>
+            <select
+              value={categorie}
+              onChange={(e) => setCategorie(e.target.value as CategorieRessource)}
+              className="rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
+            >
+              {ORDRE_CATEGORIES_RESSOURCE.map((valeur) => (
+                <option key={valeur} value={valeur}>
+                  {CATEGORIE_RESSOURCE_LABELS[valeur]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button onClick={enregistrer} disabled={envoiEnCours}>
+            {envoiEnCours ? 'Enregistrement…' : 'Enregistrer'}
+          </Button>
+          <Button variant="secondary" onClick={annuler} disabled={envoiEnCours}>
+            Annuler
+          </Button>
+        </div>
+        {erreur && <p className="rounded-lg bg-accent-3/15 px-4 py-3 text-sm text-accent-3">{erreur}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-b border-line pb-3 last:border-0">
+      <span className="min-w-40 flex-1">
+        {ressource.libelle}
+        <span className="ml-2 text-xs text-text-faint">
+          {CATEGORIE_RESSOURCE_LABELS[ressource.categorie]} · {ressource.type === 'lien' ? 'Lien' : 'Fichier'}
+          {ressource.agence_id === null && ' · Commune à tous les points de vente'}
+        </span>
+      </span>
+      <Button type="button" variant="secondary" onClick={() => setEdition(true)}>
+        Modifier
+      </Button>
+      <Button type="button" variant="danger" onClick={supprimer}>
+        Supprimer
+      </Button>
+    </div>
+  )
+}
+
 export function Ressources({ agenceId }: { agenceId: string }) {
   const [ressources, setRessources] = useState<Ressource[]>([])
   const [chargement, setChargement] = useState(true)
@@ -87,14 +179,6 @@ export function Ressources({ agenceId }: { agenceId: string }) {
     charger()
   }
 
-  async function supprimer(ressource: Ressource) {
-    if (ressource.storage_path) {
-      await supabase.storage.from('ressources').remove([ressource.storage_path])
-    }
-    await supabase.from('ressources').delete().eq('id', ressource.id)
-    charger()
-  }
-
   if (chargement) return <Skeleton lignes={4} className="max-w-2xl" />
 
   return (
@@ -103,18 +187,7 @@ export function Ressources({ agenceId }: { agenceId: string }) {
         <h3 className="mb-4 font-heading text-lg">Ressources existantes</h3>
         <div className="flex flex-col gap-3">
           {ressources.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center gap-3 border-b border-line pb-3 last:border-0">
-              <span className="min-w-40 flex-1">
-                {r.libelle}
-                <span className="ml-2 text-xs text-text-faint">
-                  {CATEGORIE_RESSOURCE_LABELS[r.categorie]} · {r.type === 'lien' ? 'Lien' : 'Fichier'}
-                  {r.agence_id === null && ' · Commune à tous les points de vente'}
-                </span>
-              </span>
-              <Button type="button" variant="danger" onClick={() => supprimer(r)}>
-                Supprimer
-              </Button>
-            </div>
+            <LigneRessource key={r.id} ressource={r} onChange={charger} />
           ))}
           {ressources.length === 0 && <p className="text-text-dim">Aucune ressource pour l'instant.</p>}
         </div>

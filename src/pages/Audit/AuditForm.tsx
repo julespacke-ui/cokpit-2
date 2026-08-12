@@ -4,6 +4,7 @@ import { QUESTIONNAIRE_AUDIT } from '../../lib/questionnaireAudit'
 import type { Agence, Audit } from '../../types/database'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
+import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
 
 const COULEURS_BLOC = {
   violet: 'border-l-accent-1 text-accent-1',
@@ -80,18 +81,13 @@ export function AuditForm({ audit, agences, onEnregistre, onAnnuler }: AuditForm
           </div>
           <div>
             <label className="mb-1.5 block text-sm text-text-dim">Agence cliente (si signé)</label>
-            <select
+            <SelecteurAgence
+              agences={agences}
               value={agenceId}
-              onChange={(e) => setAgenceId(e.target.value)}
+              onChange={setAgenceId}
+              optionVide="Aucune — prospect"
               className="w-full rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
-            >
-              <option value="">Aucune — prospect</option>
-              {agences.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nom}
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <div>
             <label className="mb-1.5 block text-sm text-text-dim">Date de l'audit</label>
