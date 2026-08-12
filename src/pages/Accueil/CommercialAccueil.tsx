@@ -146,7 +146,7 @@ export function CommercialAccueil({ profile }: { profile: Profile }) {
       <section className="mb-8">
         <h3 className="mb-4 font-heading text-lg">Objectifs du mois</h3>
         {chargementObjectifs ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (
               <SkeletonCarte key={i} />
             ))}
@@ -154,7 +154,7 @@ export function CommercialAccueil({ profile }: { profile: Profile }) {
         ) : Object.keys(cibles).length === 0 ? (
           <p className="text-text-dim">Aucun objectif défini pour ce mois.</p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {Object.entries(cibles).map(([cle, cible]) => (
               <JaugeObjectif
                 key={cle}
