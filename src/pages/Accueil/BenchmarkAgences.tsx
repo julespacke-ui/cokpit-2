@@ -214,6 +214,33 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
   )
 }
 
+type CleColonneTriable = 'ventes' | 'ca' | 'panierMoyen' | 'honorairesMoyens' | 'tauxRotation' | 'mandats' | 'caGenere' | 'evolutionBaseline'
+
+/** Valeur numérique d'une ligne pour chaque colonne triable — ajouter une
+ * colonne ici (et dans COLONNES juste en dessous) suffit à la rendre
+ * filtrable/triable, sans toucher au reste du composant. */
+const EXTRACTEURS_TRI: Record<CleColonneTriable, (l: LigneBenchmark) => number | null> = {
+  ventes: (l) => l.ventes,
+  ca: (l) => l.ca,
+  panierMoyen: (l) => l.panierMoyen,
+  honorairesMoyens: (l) => l.honorairesMoyens,
+  tauxRotation: (l) => l.tauxRotation,
+  mandats: (l) => l.mandats,
+  caGenere: (l) => l.ca,
+  evolutionBaseline: (l) => (l.agence.ca_baseline !== null ? l.ca - l.agence.ca_baseline : null),
+}
+
+const COLONNES: { cle: CleColonneTriable; label: string }[] = [
+  { cle: 'ventes', label: 'Ventes' },
+  { cle: 'ca', label: 'CA TTC' },
+  { cle: 'panierMoyen', label: 'Panier moyen' },
+  { cle: 'honorairesMoyens', label: 'Honoraires moyens' },
+  { cle: 'tauxRotation', label: 'Taux de rotation' },
+  { cle: 'mandats', label: 'Mandats' },
+  { cle: 'caGenere', label: 'CA généré' },
+  { cle: 'evolutionBaseline', label: 'Évolution vs baseline' },
+]
+
 function TableBenchmark({
   lignes,
   onClickAgence,
@@ -221,24 +248,48 @@ function TableBenchmark({
   lignes: LigneBenchmark[]
   onClickAgence: (agenceId: string) => void
 }) {
+  const [tri, setTri] = useState<{ cle: CleColonneTriable; sens: 'desc' | 'asc' } | null>(null)
+
+  function basculerTri(cle: CleColonneTriable) {
+    setTri((t) => (t?.cle === cle ? { cle, sens: t.sens === 'desc' ? 'asc' : 'desc' } : { cle, sens: 'desc' }))
+  }
+
+  const lignesAffichees = tri
+    ? [...lignes].sort((a, b) => {
+        const extraire = EXTRACTEURS_TRI[tri.cle]
+        const va = extraire(a)
+        const vb = extraire(b)
+        // Baselines non définies (valeur null) toujours en fin de liste, quel que soit le sens.
+        if (va === null && vb === null) return 0
+        if (va === null) return 1
+        if (vb === null) return -1
+        return tri.sens === 'desc' ? vb - va : va - vb
+      })
+    : lignes
+
   return (
     <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-bg-elev">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line text-left text-text-dim">
             <th className="px-4 py-3 font-normal">Agence</th>
-            <th className="px-4 py-3 text-right font-normal">Ventes</th>
-            <th className="px-4 py-3 text-right font-normal">CA TTC</th>
-            <th className="px-4 py-3 text-right font-normal">Panier moyen</th>
-            <th className="px-4 py-3 text-right font-normal">Honoraires moyens</th>
-            <th className="px-4 py-3 text-right font-normal">Taux de rotation</th>
-            <th className="px-4 py-3 text-right font-normal">Mandats</th>
-            <th className="px-4 py-3 text-right font-normal">CA généré</th>
-            <th className="px-4 py-3 text-right font-normal">Évolution vs baseline</th>
+            {COLONNES.map((col) => (
+              <th key={col.cle} className="px-4 py-3 text-right font-normal">
+                <button
+                  type="button"
+                  onClick={() => basculerTri(col.cle)}
+                  className="inline-flex items-center gap-1 whitespace-nowrap transition-colors duration-150 hover:text-text"
+                  title={`Trier par ${col.label} (meilleurs en premier)`}
+                >
+                  {col.label}
+                  <span className="text-text-faint">{tri?.cle === col.cle ? (tri.sens === 'desc' ? '▼' : '▲') : ''}</span>
+                </button>
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {lignes.map((ligne) => {
+          {lignesAffichees.map((ligne) => {
             const baseline = ligne.agence.ca_baseline
             const ecart = baseline !== null ? ligne.ca - baseline : null
             const ecartPourcent = baseline !== null && baseline !== 0 ? (ecart! / baseline) * 100 : null
