@@ -12,6 +12,9 @@ interface Cibles {
   rdv_semaine?: number
   mandats?: number
   videos?: number
+  avis?: number
+  extensions_garantie?: number
+  prospections?: number
 }
 
 const CHAMPS: { cle: keyof Cibles; label: string }[] = [
@@ -20,6 +23,9 @@ const CHAMPS: { cle: keyof Cibles; label: string }[] = [
   { cle: 'rdv_semaine', label: 'RDV / semaine' },
   { cle: 'mandats', label: 'Mandats' },
   { cle: 'videos', label: 'Vidéos' },
+  { cle: 'avis', label: 'Avis' },
+  { cle: 'extensions_garantie', label: 'Extensions garantie' },
+  { cle: 'prospections', label: 'Prospections extérieures' },
 ]
 
 function moisActuelISO() {

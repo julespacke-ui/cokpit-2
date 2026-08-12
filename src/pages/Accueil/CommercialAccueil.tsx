@@ -27,6 +27,9 @@ const CIBLES_LABELS: Record<string, { label: string; unite?: string }> = {
   rdv_semaine: { label: 'RDV / semaine' },
   mandats: { label: 'Mandats' },
   videos: { label: 'Vidéos' },
+  avis: { label: 'Avis' },
+  extensions_garantie: { label: 'Extensions garantie' },
+  prospections: { label: 'Prospections extérieures' },
 }
 
 export function CommercialAccueil({ profile }: { profile: Profile }) {
@@ -61,7 +64,7 @@ export function CommercialAccueil({ profile }: { profile: Profile }) {
         .maybeSingle(),
       supabase
         .from('ventes')
-        .select('honoraires_reels')
+        .select('honoraires_reels, extension_garantie_id')
         .eq('commercial_id', profile.id)
         .gte('date_vente', debutMois)
         .lte('date_vente', finMois),
@@ -86,6 +89,9 @@ export function CommercialAccueil({ profile }: { profile: Profile }) {
         mandats: agregat.mandatsRentres,
         videos: agregat.videosPostees,
         rdv_semaine: semainesRenseignees > 0 ? agregat.rdvVenus / semainesRenseignees : 0,
+        avis: agregat.nbAvisRecus,
+        prospections: agregat.prospectionsExterieures,
+        extensions_garantie: ventes.filter((v) => v.extension_garantie_id !== null).length,
       })
       setChargementObjectifs(false)
     })
