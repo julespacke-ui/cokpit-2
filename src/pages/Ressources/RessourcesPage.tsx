@@ -10,6 +10,7 @@ import {
 import { Card } from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
+import { agenceParDefaut } from '../../lib/agences'
 
 function estHtml(storagePath: string): boolean {
   return storagePath.toLowerCase().endsWith('.html')
@@ -152,7 +153,7 @@ export function RessourcesPage() {
       .order('nom')
       .then(({ data }) => {
         setAgences(data ?? [])
-        setAgenceSelectionneeId((prev) => prev || data?.[0]?.id || '')
+        setAgenceSelectionneeId((prev) => prev || agenceParDefaut(data ?? []))
       })
   }, [estAdmin])
 

@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import type { Agence } from '../../types/database'
 import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
+import { agenceParDefaut } from '../../lib/agences'
 import { PlanActionCommercial } from './PlanActionCommercial'
 import { PlanActionListe } from './PlanActionListe'
 
@@ -21,7 +22,7 @@ export function PlanActionPage() {
       .order('nom')
       .then(({ data }) => {
         setAgences(data ?? [])
-        setAgenceSelectionneeId((prev) => prev || data?.[0]?.id || '')
+        setAgenceSelectionneeId((prev) => prev || agenceParDefaut(data ?? []))
       })
   }, [estAdmin])
 

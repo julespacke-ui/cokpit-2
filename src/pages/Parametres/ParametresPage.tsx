@@ -11,6 +11,7 @@ import { Objectifs } from './Objectifs'
 import { PlansAction } from './PlansAction'
 import { Ressources } from './Ressources'
 import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
+import { agenceParDefaut } from '../../lib/agences'
 
 type Onglet = 'agences' | 'bareme' | 'packs' | 'extensions' | 'comptes' | 'objectifs' | 'plans_action' | 'ressources'
 
@@ -29,7 +30,7 @@ export function ParametresPage() {
       .order('nom')
       .then(({ data }) => {
         setAgences(data ?? [])
-        setAgenceSelectionneeId((prev) => prev || data?.[0]?.id || '')
+        setAgenceSelectionneeId((prev) => prev || agenceParDefaut(data ?? []))
       })
   }
 
