@@ -14,6 +14,47 @@ interface ComptesProps {
   peutChoisirRole: boolean
 }
 
+function ModifierCompte({
+  profil,
+  onFermer,
+  onEnregistre,
+}: {
+  profil: Profile
+  onFermer: () => void
+  onEnregistre: () => void
+}) {
+  const [prenom, setPrenom] = useState(profil.prenom)
+  const [nom, setNom] = useState(profil.nom)
+  const [envoiEnCours, setEnvoiEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  async function valider() {
+    setErreur(null)
+    setEnvoiEnCours(true)
+    const { error } = await supabase.from('profiles').update({ prenom, nom }).eq('id', profil.id)
+    setEnvoiEnCours(false)
+    if (error) {
+      setErreur(error.message)
+      return
+    }
+    onEnregistre()
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <Input value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Prénom" className="w-40" />
+      <Input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom" className="w-40" />
+      <Button onClick={valider} disabled={envoiEnCours || !prenom.trim() || !nom.trim()}>
+        {envoiEnCours ? 'Enregistrement…' : 'Enregistrer'}
+      </Button>
+      <Button variant="secondary" onClick={onFermer} disabled={envoiEnCours}>
+        Annuler
+      </Button>
+      {erreur && <p className="w-full text-sm text-accent-3">{erreur}</p>}
+    </div>
+  )
+}
+
 function ReinitialiserMotDePasse({ profil, onFermer }: { profil: Profile; onFermer: () => void }) {
   const [motDePasse, setMotDePasse] = useState('')
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
@@ -72,6 +113,7 @@ export function Comptes({ agenceId, peutChoisirRole }: ComptesProps) {
   const [chargement, setChargement] = useState(true)
   const [formulaireOuvert, setFormulaireOuvert] = useState(false)
   const [resetOuvertId, setResetOuvertId] = useState<string | null>(null)
+  const [modifOuvertId, setModifOuvertId] = useState<string | null>(null)
 
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
@@ -133,6 +175,7 @@ export function Comptes({ agenceId, peutChoisirRole }: ComptesProps) {
       <div className="flex flex-col gap-3">
         {profils.map((p) => {
           const peutReinitialiser = p.role !== 'admin' && (peutChoisirRole || p.role === 'commercial')
+          const peutModifier = p.role !== 'admin' && (peutChoisirRole || p.role === 'commercial')
           return (
             <div key={p.id} className="border-b border-line pb-3 last:border-0">
               <div className="flex flex-wrap items-center gap-3">
@@ -140,6 +183,14 @@ export function Comptes({ agenceId, peutChoisirRole }: ComptesProps) {
                   {p.prenom} {p.nom}
                   <span className="ml-2 text-xs text-text-faint">{ROLE_LABELS[p.role]}</span>
                 </span>
+                {peutModifier && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setModifOuvertId(modifOuvertId === p.id ? null : p.id)}
+                  >
+                    Modifier
+                  </Button>
+                )}
                 {peutReinitialiser && (
                   <Button
                     variant="secondary"
@@ -152,6 +203,16 @@ export function Comptes({ agenceId, peutChoisirRole }: ComptesProps) {
                   <Toggle checked={p.actif} onChange={() => toggleActif(p)} label={`Actif : ${p.prenom}`} />
                 )}
               </div>
+              {modifOuvertId === p.id && (
+                <ModifierCompte
+                  profil={p}
+                  onFermer={() => setModifOuvertId(null)}
+                  onEnregistre={() => {
+                    setModifOuvertId(null)
+                    charger()
+                  }}
+                />
+              )}
               {resetOuvertId === p.id && (
                 <ReinitialiserMotDePasse profil={p} onFermer={() => setResetOuvertId(null)} />
               )}
