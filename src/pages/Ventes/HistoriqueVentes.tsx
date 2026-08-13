@@ -10,6 +10,7 @@ import { SkeletonTableau } from '../../components/ui/Skeleton'
 const ORIGINE_LABELS: Record<string, string> = {
   recommandation: 'Recommandation',
   lead_internet: 'Lead internet',
+  reseaux_sociaux: 'Réseaux sociaux',
   prospection: 'Prospection',
   passage: 'Passage',
   liste_chaude: 'Liste chaude',

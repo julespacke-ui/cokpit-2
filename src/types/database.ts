@@ -6,6 +6,7 @@ export type Role = 'admin' | 'gerant' | 'commercial'
 export type OrigineVente =
   | 'recommandation'
   | 'lead_internet'
+  | 'reseaux_sociaux'
   | 'prospection'
   | 'passage'
   | 'liste_chaude'

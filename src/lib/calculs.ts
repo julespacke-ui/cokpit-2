@@ -120,11 +120,18 @@ export function tauxExtensionGarantie(ventes: VentePourIndicateurs[]): number {
   return (avecExtension / ventes.length) * 100
 }
 
-/** Taux de recommandation = ventes d'origine "recommandation" / ventes totales, en %. */
-export function tauxRecommandation(ventes: VentePourIndicateurs[]): number {
-  if (ventes.length === 0) return 0
-  const recommandations = ventes.filter((v) => v.origine_vente === 'recommandation').length
-  return (recommandations / ventes.length) * 100
+/** Répartition des ventes par origine, en % du total (une clé par valeur d'origine présente dans `ventes`). */
+export function repartitionOrigines(ventes: VentePourIndicateurs[]): Record<string, number> {
+  if (ventes.length === 0) return {}
+  const compteurs: Record<string, number> = {}
+  for (const v of ventes) {
+    compteurs[v.origine_vente] = (compteurs[v.origine_vente] ?? 0) + 1
+  }
+  const repartition: Record<string, number> = {}
+  for (const [origine, n] of Object.entries(compteurs)) {
+    repartition[origine] = (n / ventes.length) * 100
+  }
+  return repartition
 }
 
 /**

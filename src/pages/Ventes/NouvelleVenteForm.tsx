@@ -10,6 +10,7 @@ import { Toggle } from '../../components/ui/Toggle'
 const ORIGINES: { valeur: OrigineVente; label: string }[] = [
   { valeur: 'recommandation', label: 'Recommandation' },
   { valeur: 'lead_internet', label: 'Lead internet' },
+  { valeur: 'reseaux_sociaux', label: 'Réseaux sociaux' },
   { valeur: 'prospection', label: 'Prospection' },
   { valeur: 'passage', label: 'Passage' },
   { valeur: 'liste_chaude', label: 'Liste chaude' },
