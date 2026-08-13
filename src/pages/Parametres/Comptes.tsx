@@ -1,37 +1,47 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
-import type { Profile, Role } from '../../types/database'
+import type { Agence, Profile, Role } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Toggle } from '../../components/ui/Toggle'
+import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
 
 const ROLE_LABELS: Record<Role, string> = { admin: 'Admin', gerant: 'Gérant', commercial: 'Commercial' }
 
 interface ComptesProps {
   agenceId: string
   peutChoisirRole: boolean
+  /** Liste des agences, fournie uniquement côté admin — permet de déplacer un compte vers une autre agence. */
+  agences?: Agence[]
 }
 
 function ModifierCompte({
   profil,
+  agences,
   onFermer,
   onEnregistre,
 }: {
   profil: Profile
+  /** Fourni uniquement côté admin : permet aussi de déplacer le compte vers une autre agence. */
+  agences?: Agence[]
   onFermer: () => void
   onEnregistre: () => void
 }) {
   const [prenom, setPrenom] = useState(profil.prenom)
   const [nom, setNom] = useState(profil.nom)
+  const [agenceId, setAgenceId] = useState(profil.agence_id ?? '')
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
   async function valider() {
     setErreur(null)
     setEnvoiEnCours(true)
-    const { error } = await supabase.from('profiles').update({ prenom, nom }).eq('id', profil.id)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ prenom, nom, ...(agences ? { agence_id: agenceId } : {}) })
+      .eq('id', profil.id)
     setEnvoiEnCours(false)
     if (error) {
       setErreur(error.message)
@@ -44,7 +54,8 @@ function ModifierCompte({
     <div className="mt-2 flex flex-wrap items-center gap-2">
       <Input value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Prénom" className="w-40" />
       <Input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom" className="w-40" />
-      <Button onClick={valider} disabled={envoiEnCours || !prenom.trim() || !nom.trim()}>
+      {agences && <SelecteurAgence agences={agences} value={agenceId} onChange={setAgenceId} className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text" />}
+      <Button onClick={valider} disabled={envoiEnCours || !prenom.trim() || !nom.trim() || (!!agences && !agenceId)}>
         {envoiEnCours ? 'Enregistrement…' : 'Enregistrer'}
       </Button>
       <Button variant="secondary" onClick={onFermer} disabled={envoiEnCours}>
@@ -108,7 +119,7 @@ function ReinitialiserMotDePasse({ profil, onFermer }: { profil: Profile; onFerm
   )
 }
 
-export function Comptes({ agenceId, peutChoisirRole }: ComptesProps) {
+export function Comptes({ agenceId, peutChoisirRole, agences }: ComptesProps) {
   const [profils, setProfils] = useState<Profile[]>([])
   const [chargement, setChargement] = useState(true)
   const [formulaireOuvert, setFormulaireOuvert] = useState(false)
@@ -206,6 +217,7 @@ export function Comptes({ agenceId, peutChoisirRole }: ComptesProps) {
               {modifOuvertId === p.id && (
                 <ModifierCompte
                   profil={p}
+                  agences={peutChoisirRole ? agences : undefined}
                   onFermer={() => setModifOuvertId(null)}
                   onEnregistre={() => {
                     setModifOuvertId(null)

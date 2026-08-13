@@ -91,7 +91,7 @@ export function ParametresPage() {
         {onglet === 'packs' && agenceSelectionneeId && <PacksMer agenceId={agenceSelectionneeId} />}
         {onglet === 'extensions' && agenceSelectionneeId && <ExtensionsGarantie agenceId={agenceSelectionneeId} />}
         {onglet === 'comptes' && agenceSelectionneeId && (
-          <Comptes agenceId={agenceSelectionneeId} peutChoisirRole={estAdmin} />
+          <Comptes agenceId={agenceSelectionneeId} peutChoisirRole={estAdmin} agences={agences} />
         )}
         {onglet === 'objectifs' && agenceSelectionneeId && <Objectifs agenceId={agenceSelectionneeId} />}
         {onglet === 'plans_action' && estAdmin && agenceSelectionneeId && (
