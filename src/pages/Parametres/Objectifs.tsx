@@ -67,7 +67,7 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
   const [mois, setMois] = useState(moisActuelISO())
   const [chargement, setChargement] = useState(true)
   const [ciblesAgence, setCiblesAgence] = useState<Cibles>({})
-  const [commerciaux, setCommerciaux] = useState<Profile[]>([])
+  const [membresEquipe, setMembresEquipe] = useState<Profile[]>([])
   const [ciblesParCommercial, setCiblesParCommercial] = useState<Record<string, Cibles>>({})
   const [commercialOuvert, setCommercialOuvert] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -89,10 +89,11 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
         .from('profiles')
         .select('*')
         .eq('agence_id', agenceId)
-        .eq('role', 'commercial')
+        .in('role', ['commercial', 'gerant'])
         .eq('actif', true)
+        .order('role')
         .order('prenom'),
-    ]).then(([objectifsRes, commerciauxRes]) => {
+    ]).then(([objectifsRes, membresRes]) => {
       const objectifs = (objectifsRes.data ?? []) as Objectif[]
       const objectifAgence = objectifs.find((o) => o.commercial_id === null)
       setCiblesAgence((objectifAgence?.cibles as Cibles) ?? {})
@@ -102,7 +103,7 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
         if (o.commercial_id) parCommercial[o.commercial_id] = o.cibles as Cibles
       }
       setCiblesParCommercial(parCommercial)
-      setCommerciaux(commerciauxRes.data ?? [])
+      setMembresEquipe(membresRes.data ?? [])
       setChargement(false)
     })
   }, [agenceId, periode])
@@ -195,9 +196,13 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
       </Card>
 
       <Card>
-        <h3 className="mb-4 font-heading text-lg">Objectifs par commercial (optionnel)</h3>
+        <h3 className="mb-4 font-heading text-lg">Objectifs individuels (optionnel)</h3>
+        <p className="mb-4 text-sm text-text-dim">
+          Le responsable d'agence peut aussi avoir ses propres objectifs — ils apparaîtront sur sa vue
+          commerciale, comme pour un commercial.
+        </p>
         <div className="flex flex-col gap-3">
-          {commerciaux.map((c) => (
+          {membresEquipe.map((c) => (
             <div key={c.id} className="border-b border-line pb-3 last:border-0">
               <button
                 type="button"
@@ -205,6 +210,7 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
                 className="text-sm text-text hover:text-accent-4"
               >
                 {c.prenom} {c.nom}
+                {c.role === 'gerant' && <span className="ml-2 text-xs text-text-faint">Gérant</span>}
               </button>
               {commercialOuvert === c.id && (
                 <div className="mt-3">
@@ -219,7 +225,7 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
               )}
             </div>
           ))}
-          {commerciaux.length === 0 && <p className="text-text-dim">Aucun commercial actif.</p>}
+          {membresEquipe.length === 0 && <p className="text-text-dim">Aucun membre d'équipe actif.</p>}
         </div>
       </Card>
 

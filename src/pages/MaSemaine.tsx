@@ -345,16 +345,6 @@ export function MaSemaine({ profil }: { profil?: Profile } = {}) {
           <div className="grid gap-4 sm:grid-cols-2">
             <BlocCard titre="Funnel vendeurs" icone={Users} couleur="violet">
               <div className="grid grid-cols-2 gap-4">
-                <ChampNombre
-                  label="Appels"
-                  valeur={champs.appels_passes}
-                  onChange={(v) => modifier('appels_passes', v)}
-                />
-                <ChampNombre
-                  label="Leads traités"
-                  valeur={champs.leads_traites}
-                  onChange={(v) => modifier('leads_traites', v)}
-                />
                 <ChampNombre label="RDV pris" valeur={champs.rdv_pris} onChange={(v) => modifier('rdv_pris', v)}
                 />
                 <ChampNombre
@@ -369,21 +359,21 @@ export function MaSemaine({ profil }: { profil?: Profile } = {}) {
                   onChange={(v) => modifier('mandats_rentres', v)}
                   couleur="vert"
                 />
+                <ChampNombre
+                  label="Appels (optionnel)"
+                  valeur={champs.appels_passes}
+                  onChange={(v) => modifier('appels_passes', v)}
+                />
+                <ChampNombre
+                  label="Leads traités (optionnel)"
+                  valeur={champs.leads_traites}
+                  onChange={(v) => modifier('leads_traites', v)}
+                />
               </div>
             </BlocCard>
 
             <BlocCard titre="Funnel acheteurs" icone={Car} couleur="cyan">
               <div className="grid grid-cols-2 gap-4">
-                <ChampNombre
-                  label="Leads"
-                  valeur={champs.leads_acheteurs}
-                  onChange={(v) => modifier('leads_acheteurs', v)}
-                />
-                <ChampNombre
-                  label="Propositions"
-                  valeur={champs.propositions_commerciales}
-                  onChange={(v) => modifier('propositions_commerciales', v)}
-                />
                 <ChampNombre
                   label="Visites"
                   valeur={champs.visites}
@@ -391,6 +381,16 @@ export function MaSemaine({ profil }: { profil?: Profile } = {}) {
                   couleur="cyan"
                 />
                 <StatAuto label="Ventes" valeur={ventesSemaine} couleur="vert" />
+                <ChampNombre
+                  label="Leads (optionnel)"
+                  valeur={champs.leads_acheteurs}
+                  onChange={(v) => modifier('leads_acheteurs', v)}
+                />
+                <ChampNombre
+                  label="Propositions (optionnel)"
+                  valeur={champs.propositions_commerciales}
+                  onChange={(v) => modifier('propositions_commerciales', v)}
+                />
               </div>
             </BlocCard>
           </div>

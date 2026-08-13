@@ -23,8 +23,9 @@ export function PlansAction({ agenceId }: { agenceId: string }) {
         .from('profiles')
         .select('*')
         .eq('agence_id', agenceId)
-        .eq('role', 'commercial')
+        .in('role', ['commercial', 'gerant'])
         .eq('actif', true)
+        .order('role')
         .order('prenom'),
       supabase.from('plans_action').select('*').eq('agence_id', agenceId),
     ]).then(([profilsRes, plansRes]) => {
@@ -109,6 +110,7 @@ export function PlansAction({ agenceId }: { agenceId: string }) {
           <div key={profil.id} className="flex flex-wrap items-center gap-3 border-b border-line pb-3 last:border-0">
             <span className="min-w-40 flex-1">
               {profil.prenom} {profil.nom}
+              {profil.role === 'gerant' && <span className="ml-2 text-xs text-text-faint">Gérant</span>}
               <span className="ml-2 text-xs text-text-faint">
                 {plan ? `Envoyé le ${new Date(plan.date_upload).toLocaleDateString('fr-FR')}` : 'Aucun fichier'}
               </span>
@@ -142,7 +144,7 @@ export function PlansAction({ agenceId }: { agenceId: string }) {
             )}
           </div>
         ))}
-        {lignes.length === 0 && <p className="text-text-dim">Aucun commercial actif dans cette agence.</p>}
+        {lignes.length === 0 && <p className="text-text-dim">Aucun membre d'équipe actif dans cette agence.</p>}
       </div>
 
       {erreur && <p className="mt-4 rounded-lg bg-accent-3/15 px-4 py-3 text-sm text-accent-3">{erreur}</p>}

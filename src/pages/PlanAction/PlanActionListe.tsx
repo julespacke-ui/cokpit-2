@@ -24,8 +24,9 @@ export function PlanActionListe({ agenceId }: { agenceId: string }) {
         .from('profiles')
         .select('*')
         .eq('agence_id', agenceId)
-        .eq('role', 'commercial')
+        .in('role', ['commercial', 'gerant'])
         .eq('actif', true)
+        .order('role')
         .order('prenom'),
       supabase.from('plans_action').select('*').eq('agence_id', agenceId),
     ]).then(([profilsRes, plansRes]) => {
@@ -87,6 +88,7 @@ export function PlanActionListe({ agenceId }: { agenceId: string }) {
             }`}
           >
             {profil.prenom} {profil.nom}
+            {profil.role === 'gerant' && ' (gérant)'}
             {!plan && ' (aucun fichier)'}
           </button>
         ))}
