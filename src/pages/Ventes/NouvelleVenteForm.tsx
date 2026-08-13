@@ -50,7 +50,7 @@ export function NouvelleVenteForm({
   const [extensionGarantieId, setExtensionGarantieId] = useState('')
   const [services, setServices] = useState<{ libelle: string; prix: number }[]>([])
   const [origineVente, setOrigineVente] = useState<OrigineVente | ''>('')
-  const [avisLaisse, setAvisLaisse] = useState(false)
+  const [nbAvis, setNbAvis] = useState(0)
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -118,7 +118,7 @@ export function NouvelleVenteForm({
         carte_grise_montant: carteGrise === '' ? 0 : Number(carteGrise),
         extension_garantie_id: extensionGarantieId || null,
         origine_vente: origineVente,
-        avis_laisse: avisLaisse,
+        nb_avis: nbAvis,
       })
       .select('id')
       .single()
@@ -296,9 +296,19 @@ export function NouvelleVenteForm({
           </select>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-sm">Avis laissé</span>
-          <Toggle checked={avisLaisse} onChange={setAvisLaisse} label="Avis laissé" />
+        <div>
+          <label className="mb-1.5 block text-sm text-text-dim">
+            Avis reçus (jusqu'à 2 par vente — acheteur + vendeur)
+          </label>
+          <select
+            value={nbAvis}
+            onChange={(e) => setNbAvis(Number(e.target.value))}
+            className="w-full rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
+          >
+            <option value={0}>0</option>
+            <option value={1}>1</option>
+            <option value={2}>2</option>
+          </select>
         </div>
 
         <div className="rounded-lg bg-bg-elev-2 px-4 py-3 text-sm">

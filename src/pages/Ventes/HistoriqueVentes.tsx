@@ -23,7 +23,7 @@ interface VenteLigne {
   prix_vente: number
   honoraires_reels: number
   origine_vente: string
-  avis_laisse: boolean
+  nb_avis: number
   carte_grise_montant: number
   panier: number
   commercial: { prenom: string; nom: string } | null
@@ -90,7 +90,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
         prix_vente: v.prix_vente,
         honoraires_reels: v.honoraires_reels,
         origine_vente: v.origine_vente,
-        avis_laisse: v.avis_laisse,
+        nb_avis: v.nb_avis,
         carte_grise_montant: v.carte_grise_montant,
         commercial: v.profiles,
         panier: calculerPanierVente({
@@ -166,7 +166,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
                 <span>
                   Carte grise : <strong className="tabular-nums">{v.carte_grise_montant.toLocaleString('fr-FR')} €</strong>
                 </span>
-                <span>Avis laissé : {v.avis_laisse ? 'Oui' : 'Non'}</span>
+                <span>Avis reçus : {v.nb_avis}/2</span>
               </div>
             </Card>
           ))}

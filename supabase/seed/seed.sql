@@ -116,38 +116,38 @@ begin
   insert into public.ventes (
     commercial_id, agence_id, date_vente, vehicule, prix_vente,
     honoraires_preconises, honoraires_reels, pack_mer_id, carte_grise_montant,
-    extension_garantie_id, origine_vente, avis_laisse
+    extension_garantie_id, origine_vente, nb_avis
   ) values (
     v_julien_id, v_agence_id, '2026-07-08', 'Peugeot 3008', 18500,
-    1990, 1990, v_pack_id, 62.50, v_ext_12_id, 'recommandation', true
+    1990, 1990, v_pack_id, 62.50, v_ext_12_id, 'recommandation', 1
   ) returning id into v_vente_id;
   insert into public.vente_services (vente_id, libelle, prix) values (v_vente_id, 'Rédaction certificat de cession express', 39.00);
 
   insert into public.ventes (
     commercial_id, agence_id, date_vente, vehicule, prix_vente,
     honoraires_preconises, honoraires_reels, pack_mer_id, carte_grise_montant,
-    extension_garantie_id, origine_vente, avis_laisse
+    extension_garantie_id, origine_vente, nb_avis
   ) values (
     v_julien_id, v_agence_id, '2026-07-16', 'Renault Clio', 9800,
-    1490, 1290, v_pack_id, 45.30, null, 'prospection', false
+    1490, 1290, v_pack_id, 45.30, null, 'prospection', 0
   );
 
   insert into public.ventes (
     commercial_id, agence_id, date_vente, vehicule, prix_vente,
     honoraires_preconises, honoraires_reels, pack_mer_id, carte_grise_montant,
-    extension_garantie_id, origine_vente, avis_laisse
+    extension_garantie_id, origine_vente, nb_avis
   ) values (
     v_julien_id, v_agence_id, '2026-07-29', 'Citroën C3', 7200,
-    990, 990, v_pack_id, 38.00, v_ext_12_id, 'liste_chaude', true
+    990, 990, v_pack_id, 38.00, v_ext_12_id, 'liste_chaude', 2
   );
 
   insert into public.ventes (
     commercial_id, agence_id, date_vente, vehicule, prix_vente,
     honoraires_preconises, honoraires_reels, pack_mer_id, carte_grise_montant,
-    extension_garantie_id, origine_vente, avis_laisse
+    extension_garantie_id, origine_vente, nb_avis
   ) values (
     v_julien_id, v_agence_id, '2026-08-04', 'Volkswagen Golf', 16400,
-    1490, 1490, v_pack_id, 58.90, v_ext_24_id, 'lead_internet', false
+    1490, 1490, v_pack_id, 58.90, v_ext_24_id, 'lead_internet', 0
   ) returning id into v_vente_id;
   insert into public.vente_services (vente_id, libelle, prix) values (v_vente_id, 'Livraison à domicile', 79.00);
 
@@ -155,20 +155,20 @@ begin
   insert into public.ventes (
     commercial_id, agence_id, date_vente, vehicule, prix_vente,
     honoraires_preconises, honoraires_reels, pack_mer_id, carte_grise_montant,
-    extension_garantie_id, origine_vente, avis_laisse
+    extension_garantie_id, origine_vente, nb_avis
   ) values (
     v_camille_id, v_agence_id, '2026-08-05', 'Toyota Yaris', 11200,
-    1490, 1090, v_pack_id, 41.20, null, 'passage', false
+    1490, 1090, v_pack_id, 41.20, null, 'passage', 0
   );
 
   -- Sophie (gérante) : 1 vente en août
   insert into public.ventes (
     commercial_id, agence_id, date_vente, vehicule, prix_vente,
     honoraires_preconises, honoraires_reels, pack_mer_id, carte_grise_montant,
-    extension_garantie_id, origine_vente, avis_laisse
+    extension_garantie_id, origine_vente, nb_avis
   ) values (
     v_gerant_id, v_agence_id, '2026-08-02', 'BMW Série 1', 21000,
-    1990, 1990, v_pack_id, 68.00, v_ext_24_id, 'recommandation', true
+    1990, 1990, v_pack_id, 68.00, v_ext_24_id, 'recommandation', 1
   );
 
 end $$;

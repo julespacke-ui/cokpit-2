@@ -92,7 +92,7 @@ interface VentePourIndicateurs {
   honoraires_reels: number
   honoraires_preconises: number
   origine_vente: string
-  avis_laisse: boolean
+  nb_avis: number
   extension_garantie_id: string | null
 }
 
@@ -127,11 +127,15 @@ export function tauxRecommandation(ventes: VentePourIndicateurs[]): number {
   return (recommandations / ventes.length) * 100
 }
 
-/** Ratio avis/ventes = ventes avec avis laissé / ventes totales, en %. */
+/**
+ * Ratio avis/ventes = somme des avis reçus / avis maximum possible, en %.
+ * Une vente peut générer jusqu'à 2 avis (acheteur + vendeur) : le maximum
+ * possible est donc ventes × 2, pas simplement le nombre de ventes.
+ */
 export function ratioAvisVentes(ventes: VentePourIndicateurs[]): number {
   if (ventes.length === 0) return 0
-  const avecAvis = ventes.filter((v) => v.avis_laisse).length
-  return (avecAvis / ventes.length) * 100
+  const totalAvis = ventes.reduce((somme, v) => somme + v.nb_avis, 0)
+  return (totalAvis / (ventes.length * 2)) * 100
 }
 
 /** Panier moyen agrégé sur un ensemble de paniers déjà calculés (calculerPanierVente). */

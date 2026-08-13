@@ -15,7 +15,7 @@ interface VenteIndicateur {
   honoraires_reels: number
   honoraires_preconises: number
   origine_vente: string
-  avis_laisse: boolean
+  nb_avis: number
   extension_garantie_id: string | null
 }
 

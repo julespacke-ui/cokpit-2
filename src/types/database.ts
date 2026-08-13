@@ -140,7 +140,8 @@ export interface Vente {
   carte_grise_montant: number
   extension_garantie_id: string | null
   origine_vente: OrigineVente
-  avis_laisse: boolean
+  /** 0, 1 ou 2 — une transaction peut générer jusqu'à deux avis (acheteur + vendeur). */
+  nb_avis: number
   created_at: string
   updated_at: string
 }

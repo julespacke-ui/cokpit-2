@@ -19,7 +19,7 @@ interface VenteAvecRelations {
   honoraires_reels: number
   honoraires_preconises: number
   origine_vente: string
-  avis_laisse: boolean
+  nb_avis: number
   extension_garantie_id: string | null
   packs_mer: { prix: number } | null
   extensions_garantie: { prix_client: number } | null
@@ -70,7 +70,7 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
       supabase
         .from('ventes')
         .select(
-          'id, agence_id, honoraires_reels, honoraires_preconises, origine_vente, avis_laisse, extension_garantie_id, packs_mer(prix), extensions_garantie(prix_client), vente_services(prix)',
+          'id, agence_id, honoraires_reels, honoraires_preconises, origine_vente, nb_avis, extension_garantie_id, packs_mer(prix), extensions_garantie(prix_client), vente_services(prix)',
         )
         .gte('date_vente', du)
         .lte('date_vente', au),
