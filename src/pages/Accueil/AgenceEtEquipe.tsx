@@ -13,6 +13,10 @@ import { Skeleton } from '../../components/ui/Skeleton'
  * cf. AgenceDetailAdmin) et pour le gérant (sa propre agence, cf.
  * GerantAccueil) : la liste se recalcule à chaque chargement, donc à jour
  * dès qu'un compte est ajouté ou retiré.
+ *
+ * La "Semaine de {prénom}" y est modifiable (pas juste consultable) : admin
+ * et gérant peuvent tous les deux corriger/compléter la saisie d'un membre
+ * de leur équipe, autorisé côté RLS pour le gérant sur sa propre agence.
  */
 export function AgenceEtEquipe({
   agenceId,
@@ -78,7 +82,7 @@ export function AgenceEtEquipe({
         <div key={profilVue.id} className="animate-page-in -mx-4 md:-mx-8">
           <CommercialAccueil profile={profilVue} />
           <div className="border-t border-line">
-            <MaSemaine profil={profilVue} lectureSeule />
+            <MaSemaine profil={profilVue} />
           </div>
         </div>
       ) : (
