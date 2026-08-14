@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { calculerPanierVente } from '../../lib/calculs'
 import { couleurSerie } from '../../lib/couleurs'
@@ -40,6 +40,76 @@ function derniersMois(nb: number): MoisAxe[] {
   return mois
 }
 
+/** Sélecteur multi-agences par nom (checkboxes dans un panneau), plutôt qu'un simple compte "top N". */
+function SelecteurAgencesMulti({
+  agences,
+  selectionnees,
+  onChange,
+}: {
+  agences: Agence[]
+  selectionnees: Set<string>
+  onChange: (s: Set<string>) => void
+}) {
+  const [ouvert, setOuvert] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function surClicExterieur(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOuvert(false)
+    }
+    document.addEventListener('mousedown', surClicExterieur)
+    return () => document.removeEventListener('mousedown', surClicExterieur)
+  }, [])
+
+  const toutesSelectionnees = selectionnees.size === agences.length
+
+  function toggleAgence(id: string) {
+    const next = new Set(selectionnees)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    onChange(next)
+  }
+
+  const label = toutesSelectionnees
+    ? `Toutes (${agences.length})`
+    : selectionnees.size === 0
+      ? 'Aucune agence'
+      : `${selectionnees.size} agence${selectionnees.size > 1 ? 's' : ''}`
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOuvert((o) => !o)}
+        className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text"
+      >
+        {label}
+      </button>
+      {ouvert && (
+        <div className="absolute z-10 mt-1 max-h-72 w-56 overflow-y-auto rounded-lg border border-line bg-bg-elev-2 p-2 shadow-lg">
+          <label className="mb-1 flex cursor-pointer items-center gap-2 rounded-md border-b border-line px-2 py-1.5 pb-2 text-sm hover:bg-bg-elev">
+            <input
+              type="checkbox"
+              checked={toutesSelectionnees}
+              onChange={() => onChange(toutesSelectionnees ? new Set() : new Set(agences.map((a) => a.id)))}
+            />
+            Toutes
+          </label>
+          {agences.map((a) => (
+            <label
+              key={a.id}
+              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-bg-elev"
+            >
+              <input type="checkbox" checked={selectionnees.has(a.id)} onChange={() => toggleAgence(a.id)} />
+              {a.nom}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const LARGEUR = 640
 const HAUTEUR = 260
 const MARGE_GAUCHE = 56
@@ -59,7 +129,7 @@ export function EvolutionCA() {
   const [chargement, setChargement] = useState(true)
   const [axe, setAxe] = useState<'zero' | 'baseline'>('zero')
   const [tri, setTri] = useState<'nom' | 'ca'>('ca')
-  const [nombreAffiche, setNombreAffiche] = useState<number | 'toutes'>('toutes')
+  const [agencesSelectionnees, setAgencesSelectionnees] = useState<Set<string>>(new Set())
 
   const mois = derniersMois(NB_MOIS)
 
@@ -101,6 +171,7 @@ export function EvolutionCA() {
       }))
 
       setSeries(seriesCalc)
+      setAgencesSelectionnees(new Set(agences.map((a) => a.id)))
       setChargement(false)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,8 +188,7 @@ export function EvolutionCA() {
     const totalB = b.valeurs.reduce((s, v) => s + v, 0)
     return totalB - totalA
   })
-  const seriesAffichees =
-    nombreAffiche === 'toutes' ? seriesTriees : seriesTriees.slice(0, nombreAffiche)
+  const seriesAffichees = seriesTriees.filter((s) => agencesSelectionnees.has(s.agence.id))
 
   const baselinesConfigurees = seriesAffichees
     .map((s) => s.agence.ca_baseline)
@@ -177,20 +247,17 @@ export function EvolutionCA() {
           <option value="nom">Nom (A→Z)</option>
         </select>
 
-        <label className="ml-2 text-sm text-text-dim">Nombre d'agences :</label>
-        <select
-          value={nombreAffiche}
-          onChange={(e) => setNombreAffiche(e.target.value === 'toutes' ? 'toutes' : Number(e.target.value))}
-          className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text"
-        >
-          <option value="toutes">Toutes ({series.length})</option>
-          {Array.from({ length: series.length }, (_, i) => i + 1).map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
+        <label className="ml-2 text-sm text-text-dim">Agences :</label>
+        <SelecteurAgencesMulti
+          agences={seriesTriees.map((s) => s.agence)}
+          selectionnees={agencesSelectionnees}
+          onChange={setAgencesSelectionnees}
+        />
       </div>
+
+      {seriesAffichees.length === 0 && (
+        <p className="rounded-lg bg-bg-elev-2 px-4 py-3 text-sm text-text-dim">Sélectionne au moins une agence.</p>
+      )}
 
       <svg viewBox={`0 0 ${LARGEUR} ${HAUTEUR}`} className="w-full">
         {ticksY.map((valeur, i) => (
