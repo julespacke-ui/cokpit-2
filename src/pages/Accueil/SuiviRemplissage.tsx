@@ -5,18 +5,36 @@ import { listeSemaines, toISODate } from '../../lib/periodes'
 import type { Profile } from '../../types/database'
 import { Skeleton } from '../../components/ui/Skeleton'
 
+type StatutGlobal = 'a_jour' | 'en_attente' | 'retard'
+
 interface LigneSuivi {
   profil: Profile
-  enRetard: boolean
+  statut: StatutGlobal
 }
 
-function estEnRetard(dateCreation: string, semainesRemplies: Set<string>): boolean {
+/**
+ * Statut global d'un commercial = le pire statut parmi ses semaines depuis sa
+ * création de compte. "En attente" (semaine en cours, pas encore dans le
+ * délai de retard) est distingué de "À jour" (tout est effectivement rempli)
+ * pour ne pas laisser croire à une saisie faite alors qu'elle ne l'est pas.
+ */
+function statutGlobal(dateCreation: string, semainesRemplies: Set<string>): StatutGlobal {
   const aujourdHui = new Date()
-  const semaines = listeSemaines(new Date(dateCreation), aujourdHui)
-  return semaines.some(
-    (lundi) => calculerStatutSemaine(lundi, aujourdHui, semainesRemplies.has(toISODate(lundi))) === 'retard',
+  const statuts = listeSemaines(new Date(dateCreation), aujourdHui).map((lundi) =>
+    calculerStatutSemaine(lundi, aujourdHui, semainesRemplies.has(toISODate(lundi))),
   )
+  if (statuts.includes('retard')) return 'retard'
+  if (statuts.includes('neutre')) return 'en_attente'
+  return 'a_jour'
 }
+
+const BADGES: Record<StatutGlobal, { label: string; classes: string }> = {
+  retard: { label: 'En retard', classes: 'bg-accent-3/15 text-accent-3' },
+  en_attente: { label: 'En attente', classes: 'bg-text-faint/15 text-text-dim' },
+  a_jour: { label: 'À jour', classes: 'bg-accent-2/15 text-accent-2' },
+}
+
+const ORDRE_STATUT: Record<StatutGlobal, number> = { retard: 0, en_attente: 1, a_jour: 2 }
 
 export function SuiviRemplissage({ agenceId }: { agenceId: string }) {
   const [lignes, setLignes] = useState<LigneSuivi[]>([])
@@ -40,10 +58,10 @@ export function SuiviRemplissage({ agenceId }: { agenceId: string }) {
           liste.map(async (profil) => {
             const { data } = await supabase.from('saisies_hebdo').select('semaine').eq('commercial_id', profil.id)
             const semainesRemplies = new Set((data ?? []).map((s) => s.semaine))
-            return { profil, enRetard: estEnRetard(profil.created_at, semainesRemplies) }
+            return { profil, statut: statutGlobal(profil.created_at, semainesRemplies) }
           }),
         )
-        resultats.sort((a, b) => Number(b.enRetard) - Number(a.enRetard))
+        resultats.sort((a, b) => ORDRE_STATUT[a.statut] - ORDRE_STATUT[b.statut])
         setLignes(resultats)
         setChargement(false)
       })
@@ -54,7 +72,7 @@ export function SuiviRemplissage({ agenceId }: { agenceId: string }) {
 
   return (
     <div className="flex max-w-md flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-bg-elev p-4">
-      {lignes.map(({ profil, enRetard }) => (
+      {lignes.map(({ profil, statut }) => (
         <div
           key={profil.id}
           className="flex items-center justify-between border-b border-line pb-2 last:border-0 last:pb-0"
@@ -62,15 +80,9 @@ export function SuiviRemplissage({ agenceId }: { agenceId: string }) {
           <span className="text-sm">
             {profil.prenom} {profil.nom}
           </span>
-          {enRetard ? (
-            <span className="rounded-full bg-accent-3/15 px-2.5 py-1 text-xs font-medium text-accent-3">
-              En retard
-            </span>
-          ) : (
-            <span className="rounded-full bg-accent-2/15 px-2.5 py-1 text-xs font-medium text-accent-2">
-              À jour
-            </span>
-          )}
+          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${BADGES[statut].classes}`}>
+            {BADGES[statut].label}
+          </span>
         </div>
       ))}
     </div>
