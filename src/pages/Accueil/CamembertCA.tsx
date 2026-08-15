@@ -7,7 +7,7 @@ import { SkeletonCarte } from '../../components/ui/Skeleton'
 interface VenteAvecRelations {
   commercial_id: string
   honoraires_reels: number
-  packs_mer: { prix: number } | null
+  pack_mer_prix_applique: number | null
   extensions_garantie: { prix_client: number } | null
   vente_services: { prix: number }[]
 }
@@ -47,7 +47,7 @@ export function CamembertCA({ agenceId, ventes }: { agenceId: string; ventes: Ve
   for (const v of ventes) {
     const panier = calculerPanierVente({
       honorairesReels: v.honoraires_reels,
-      prixPackMer: v.packs_mer?.prix,
+      prixPackMer: v.pack_mer_prix_applique ?? undefined,
       prixExtensionGarantie: v.extensions_garantie?.prix_client,
       services: v.vente_services ?? [],
     })

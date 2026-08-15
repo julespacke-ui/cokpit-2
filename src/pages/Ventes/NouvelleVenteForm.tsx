@@ -47,6 +47,7 @@ export function NouvelleVenteForm({
   const [honorairesReels, setHonorairesReels] = useState<number | ''>('')
   const [honorairesToucheManuel, setHonorairesToucheManuel] = useState(false)
   const [packMerId, setPackMerId] = useState('')
+  const [prixMerApplique, setPrixMerApplique] = useState<number | ''>('')
   const [carteGrise, setCarteGrise] = useState<number | ''>('')
   const [extensionGarantieId, setExtensionGarantieId] = useState('')
   const [services, setServices] = useState<{ libelle: string; prix: number }[]>([])
@@ -71,15 +72,22 @@ export function NouvelleVenteForm({
   const packSelectionne = packs.find((p) => p.id === packMerId)
   const extensionSelectionnee = extensions.find((e) => e.id === extensionGarantieId)
 
+  // Le prix par défaut du pack se réinitialise à chaque changement de pack
+  // sélectionné (y compris désélection), mais reste éditable ensuite si le
+  // client a négocié un autre montant.
+  useEffect(() => {
+    setPrixMerApplique(packSelectionne ? packSelectionne.prix : '')
+  }, [packMerId])
+
   const panier = useMemo(
     () =>
       calculerPanierVente({
         honorairesReels: honorairesReels === '' ? 0 : Number(honorairesReels),
-        prixPackMer: packSelectionne?.prix,
+        prixPackMer: packSelectionne ? (prixMerApplique === '' ? 0 : Number(prixMerApplique)) : undefined,
         prixExtensionGarantie: extensionSelectionnee?.prix_client,
         services,
       }),
-    [honorairesReels, packSelectionne, extensionSelectionnee, services],
+    [honorairesReels, packSelectionne, prixMerApplique, extensionSelectionnee, services],
   )
 
   function ajouterService() {
@@ -116,6 +124,7 @@ export function NouvelleVenteForm({
         honoraires_preconises: honorairesPreconises,
         honoraires_reels: Number(honorairesReels),
         pack_mer_id: packMerId || null,
+        pack_mer_prix_applique: packMerId ? (prixMerApplique === '' ? 0 : Number(prixMerApplique)) : null,
         carte_grise_montant: carteGrise === '' ? 0 : Number(carteGrise),
         extension_garantie_id: extensionGarantieId || null,
         origine_vente: origineVente,
@@ -196,30 +205,56 @@ export function NouvelleVenteForm({
         </div>
 
         {packs.length === 1 && (
-          <label className="flex items-center gap-3 text-sm">
-            <Toggle
-              checked={packMerId === packs[0].id}
-              onChange={(v) => setPackMerId(v ? packs[0].id : '')}
-              label={packs[0].nom}
-            />
-            {packs[0].nom} ({packs[0].prix} €)
-          </label>
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-3 text-sm">
+              <Toggle
+                checked={packMerId === packs[0].id}
+                onChange={(v) => setPackMerId(v ? packs[0].id : '')}
+                label={packs[0].nom}
+              />
+              {packs[0].nom} ({packs[0].prix} €)
+            </label>
+            {packMerId === packs[0].id && (
+              <div>
+                <label className="mb-1.5 block text-sm text-text-dim">Montant appliqué (€) — si négocié</label>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={prixMerApplique}
+                  onChange={(e) => setPrixMerApplique(e.target.value === '' ? '' : Number(e.target.value))}
+                />
+              </div>
+            )}
+          </div>
         )}
         {packs.length > 1 && (
-          <div>
-            <label className="mb-1.5 block text-sm text-text-dim">Pack mise à la route</label>
-            <select
-              value={packMerId}
-              onChange={(e) => setPackMerId(e.target.value)}
-              className="w-full rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
-            >
-              <option value="">Aucun</option>
-              {packs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nom} ({p.prix} €)
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap gap-3">
+            <div className="flex-1">
+              <label className="mb-1.5 block text-sm text-text-dim">Pack mise à la route</label>
+              <select
+                value={packMerId}
+                onChange={(e) => setPackMerId(e.target.value)}
+                className="w-full rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
+              >
+                <option value="">Aucun</option>
+                {packs.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nom} ({p.prix} €)
+                  </option>
+                ))}
+              </select>
+            </div>
+            {packMerId && (
+              <div className="flex-1">
+                <label className="mb-1.5 block text-sm text-text-dim">Montant appliqué (€) — si négocié</label>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={prixMerApplique}
+                  onChange={(e) => setPrixMerApplique(e.target.value === '' ? '' : Number(e.target.value))}
+                />
+              </div>
+            )}
           </div>
         )}
 

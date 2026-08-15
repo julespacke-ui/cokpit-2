@@ -71,7 +71,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
 
     let requete = supabase
       .from('ventes')
-      .select('*, packs_mer(prix), extensions_garantie(prix_client), vente_services(prix), profiles(prenom, nom)')
+      .select('*, extensions_garantie(prix_client), vente_services(prix), profiles(prenom, nom)')
       .eq('agence_id', agenceId)
       .gte('date_vente', du)
       .lte('date_vente', au)
@@ -96,7 +96,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
         commercial: v.profiles,
         panier: calculerPanierVente({
           honorairesReels: v.honoraires_reels,
-          prixPackMer: v.packs_mer?.prix,
+          prixPackMer: v.pack_mer_prix_applique ?? undefined,
           prixExtensionGarantie: v.extensions_garantie?.prix_client,
           services: v.vente_services ?? [],
         }),

@@ -21,7 +21,7 @@ interface VenteAvecRelations {
   origine_vente: string
   nb_avis: number
   extension_garantie_id: string | null
-  packs_mer: { prix: number } | null
+  pack_mer_prix_applique: number | null
   extensions_garantie: { prix_client: number } | null
   vente_services: { prix: number }[]
 }
@@ -70,7 +70,7 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
       supabase
         .from('ventes')
         .select(
-          'id, agence_id, honoraires_reels, honoraires_preconises, origine_vente, nb_avis, extension_garantie_id, packs_mer(prix), extensions_garantie(prix_client), vente_services(prix)',
+          'id, agence_id, honoraires_reels, honoraires_preconises, origine_vente, nb_avis, extension_garantie_id, pack_mer_prix_applique, extensions_garantie(prix_client), vente_services(prix)',
         )
         .gte('date_vente', du)
         .lte('date_vente', au),
@@ -107,7 +107,7 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
         const paniers = ventesAgence.map((v) =>
           calculerPanierVente({
             honorairesReels: v.honoraires_reels,
-            prixPackMer: v.packs_mer?.prix,
+            prixPackMer: v.pack_mer_prix_applique ?? undefined,
             prixExtensionGarantie: v.extensions_garantie?.prix_client,
             services: v.vente_services ?? [],
           }),

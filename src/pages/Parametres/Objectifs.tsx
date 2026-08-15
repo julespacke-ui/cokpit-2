@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import type { Objectif, Profile } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -64,6 +65,9 @@ function CiblesForm({ cibles, onChange }: { cibles: Cibles; onChange: (c: Cibles
 }
 
 export function Objectifs({ agenceId }: { agenceId: string }) {
+  const { profile } = useAuth()
+  const estAdmin = profile?.role === 'admin'
+
   const [mois, setMois] = useState(moisActuelISO())
   const [chargement, setChargement] = useState(true)
   const [ciblesAgence, setCiblesAgence] = useState<Cibles>({})
@@ -109,6 +113,10 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
   }, [agenceId, periode])
 
   useEffect(() => {
+    if (!estAdmin) {
+      setChargementBaseline(false)
+      return
+    }
     setChargementBaseline(true)
     setMessageBaseline(null)
     supabase
@@ -120,7 +128,7 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
         setBaseline(data?.ca_baseline ?? '')
         setChargementBaseline(false)
       })
-  }, [agenceId])
+  }, [agenceId, estAdmin])
 
   async function enregistrerBaseline() {
     setEnregistrementBaseline(true)
@@ -154,28 +162,30 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
-      <Card>
-        <h3 className="mb-1 font-heading text-lg">CA de départ (baseline)</h3>
-        <p className="mb-4 text-sm text-text-dim">
-          Saisie une fois au démarrage de l'accompagnement — sert de repère fixe, jamais recalculé
-          automatiquement. Modifiable en cas d'erreur de saisie.
-        </p>
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="mb-1.5 block text-sm text-text-dim">CA de départ (€)</label>
-            <Input
-              type="number"
-              value={baseline}
-              onChange={(e) => setBaseline(e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-48"
-            />
+      {estAdmin && (
+        <Card>
+          <h3 className="mb-1 font-heading text-lg">CA de départ (baseline)</h3>
+          <p className="mb-4 text-sm text-text-dim">
+            Saisie une fois au démarrage de l'accompagnement — sert de repère fixe, jamais recalculé
+            automatiquement. Modifiable en cas d'erreur de saisie.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="mb-1.5 block text-sm text-text-dim">CA de départ (€)</label>
+              <Input
+                type="number"
+                value={baseline}
+                onChange={(e) => setBaseline(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-48"
+              />
+            </div>
+            <Button onClick={enregistrerBaseline} disabled={enregistrementBaseline}>
+              {enregistrementBaseline ? 'Enregistrement…' : 'Enregistrer'}
+            </Button>
           </div>
-          <Button onClick={enregistrerBaseline} disabled={enregistrementBaseline}>
-            {enregistrementBaseline ? 'Enregistrement…' : 'Enregistrer'}
-          </Button>
-        </div>
-        {messageBaseline && <p className="mt-3 text-sm text-text-dim">{messageBaseline}</p>}
-      </Card>
+          {messageBaseline && <p className="mt-3 text-sm text-text-dim">{messageBaseline}</p>}
+        </Card>
+      )}
 
       <div>
         <label className="mb-1.5 block text-sm text-text-dim">Mois</label>

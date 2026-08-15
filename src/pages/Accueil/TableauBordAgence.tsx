@@ -25,7 +25,7 @@ interface VenteAvecRelations {
   origine_vente: string
   nb_avis: number
   extension_garantie_id: string | null
-  packs_mer: { prix: number } | null
+  pack_mer_prix_applique: number | null
   extensions_garantie: { prix_client: number } | null
   vente_services: { prix: number }[]
 }
@@ -71,7 +71,7 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId, onClickCommer
       supabase
         .from('ventes')
         .select(
-          'id, commercial_id, honoraires_reels, honoraires_preconises, origine_vente, nb_avis, extension_garantie_id, packs_mer(prix), extensions_garantie(prix_client), vente_services(prix)',
+          'id, commercial_id, honoraires_reels, honoraires_preconises, origine_vente, nb_avis, extension_garantie_id, pack_mer_prix_applique, extensions_garantie(prix_client), vente_services(prix)',
         )
         .eq('agence_id', agenceId)
         .gte('date_vente', plage.du)
@@ -99,7 +99,7 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId, onClickCommer
         ventesData.map((v) =>
           calculerPanierVente({
             honorairesReels: v.honoraires_reels,
-            prixPackMer: v.packs_mer?.prix,
+            prixPackMer: v.pack_mer_prix_applique ?? undefined,
             prixExtensionGarantie: v.extensions_garantie?.prix_client,
             services: v.vente_services ?? [],
           }),

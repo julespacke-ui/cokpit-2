@@ -9,7 +9,7 @@ interface VenteAvecRelations {
   agence_id: string
   date_vente: string
   honoraires_reels: number
-  packs_mer: { prix: number } | null
+  pack_mer_prix_applique: number | null
   extensions_garantie: { prix_client: number } | null
   vente_services: { prix: number }[]
 }
@@ -143,7 +143,7 @@ export function EvolutionCA() {
       supabase.from('agences').select('*').eq('est_demo', false).order('nom'),
       supabase
         .from('ventes')
-        .select('agence_id, date_vente, honoraires_reels, packs_mer(prix), extensions_garantie(prix_client), vente_services(prix)')
+        .select('agence_id, date_vente, honoraires_reels, pack_mer_prix_applique, extensions_garantie(prix_client), vente_services(prix)')
         .gte('date_vente', du)
         .lte('date_vente', au),
     ]).then(([agencesRes, ventesRes]) => {
@@ -155,7 +155,7 @@ export function EvolutionCA() {
         const cleMois = v.date_vente.slice(0, 7)
         const panier = calculerPanierVente({
           honorairesReels: v.honoraires_reels,
-          prixPackMer: v.packs_mer?.prix,
+          prixPackMer: v.pack_mer_prix_applique ?? undefined,
           prixExtensionGarantie: v.extensions_garantie?.prix_client,
           services: v.vente_services ?? [],
         })

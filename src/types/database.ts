@@ -138,6 +138,8 @@ export interface Vente {
   honoraires_preconises: number
   honoraires_reels: number
   pack_mer_id: string | null
+  /** Montant réellement appliqué du pack MER sur cette vente (négocié ou non) — distinct du prix catalogue. */
+  pack_mer_prix_applique: number | null
   carte_grise_montant: number
   extension_garantie_id: string | null
   origine_vente: OrigineVente
