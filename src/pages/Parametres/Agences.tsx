@@ -11,6 +11,7 @@ function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => voi
   const [nom, setNom] = useState(agence.nom)
   const [ville, setVille] = useState(agence.ville ?? '')
   const [estDemo, setEstDemo] = useState(agence.est_demo)
+  const [estClient, setEstClient] = useState(agence.est_client)
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -18,6 +19,7 @@ function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => voi
     setNom(agence.nom)
     setVille(agence.ville ?? '')
     setEstDemo(agence.est_demo)
+    setEstClient(agence.est_client)
     setErreur(null)
     setEdition(false)
   }
@@ -27,7 +29,7 @@ function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => voi
     setEnvoiEnCours(true)
     const { error } = await supabase
       .from('agences')
-      .update({ nom, ville: ville || null, est_demo: estDemo })
+      .update({ nom, ville: ville || null, est_demo: estDemo, est_client: estClient })
       .eq('id', agence.id)
     setEnvoiEnCours(false)
     if (error) {
@@ -60,6 +62,10 @@ function LigneAgence({ agence, onChange }: { agence: Agence; onChange: () => voi
         <label className="flex items-center gap-3 text-sm text-text-dim">
           <Toggle checked={estDemo} onChange={setEstDemo} label="Agence de démonstration / test" />
           Agence de démonstration / test — exclue du benchmark inter-agences
+        </label>
+        <label className="flex items-center gap-3 text-sm text-text-dim">
+          <Toggle checked={estClient} onChange={setEstClient} label="Client à moi" />
+          Client à moi — sinon simple client Cockpit, exclu du benchmark et de l'évolution de CA
         </label>
         {erreur && <p className="rounded-lg bg-accent-3/15 px-4 py-3 text-sm text-accent-3">{erreur}</p>}
       </div>

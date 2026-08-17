@@ -12,6 +12,8 @@ export type OrigineVente =
   | 'liste_chaude'
   | 'autre'
 
+export type TypeTransaction = 'depot_vente' | 'achat_vente' | 'export' | 'import' | 'courtage' | 'autre'
+
 export type CategorieRessource =
   | 'calendrier_editorial'
   | 'trames'
@@ -47,6 +49,8 @@ export interface Agence {
   ca_baseline: number | null
   /** Compte de démo/test, exclu par défaut du benchmark inter-agences. */
   est_demo: boolean
+  /** Vrai client de l'accompagnement (visible dans le benchmark perso de l'admin) — faux pour un client SaaS simple. */
+  est_client: boolean
   created_at: string
 }
 
@@ -143,6 +147,9 @@ export interface Vente {
   carte_grise_montant: number
   extension_garantie_id: string | null
   origine_vente: OrigineVente
+  type_transaction: TypeTransaction | null
+  /** Réponse libre saisie quand type_transaction = 'autre'. */
+  type_transaction_autre: string | null
   /** 0, 1 ou 2 — une transaction peut générer jusqu'à deux avis (acheteur + vendeur). */
   nb_avis: number
   created_at: string

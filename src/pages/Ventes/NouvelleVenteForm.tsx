@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { calculerHonorairesPreconises, calculerPanierVente } from '../../lib/calculs'
-import type { BaremeHonoraires, ExtensionGarantie, OrigineVente, PackMer } from '../../types/database'
+import type { BaremeHonoraires, ExtensionGarantie, OrigineVente, PackMer, TypeTransaction } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -14,6 +14,15 @@ const ORIGINES: { valeur: OrigineVente; label: string }[] = [
   { valeur: 'prospection', label: 'Prospection' },
   { valeur: 'passage', label: 'Passage' },
   { valeur: 'liste_chaude', label: 'Liste chaude' },
+  { valeur: 'autre', label: 'Autre' },
+]
+
+const TYPES_TRANSACTION: { valeur: TypeTransaction; label: string }[] = [
+  { valeur: 'depot_vente', label: 'Dépôt-vente' },
+  { valeur: 'achat_vente', label: 'Achat-vente' },
+  { valeur: 'export', label: 'Export' },
+  { valeur: 'import', label: 'Import' },
+  { valeur: 'courtage', label: 'Courtage' },
   { valeur: 'autre', label: 'Autre' },
 ]
 
@@ -52,6 +61,8 @@ export function NouvelleVenteForm({
   const [extensionGarantieId, setExtensionGarantieId] = useState('')
   const [services, setServices] = useState<{ libelle: string; prix: number }[]>([])
   const [origineVente, setOrigineVente] = useState<OrigineVente | ''>('')
+  const [typeTransaction, setTypeTransaction] = useState<TypeTransaction | ''>('')
+  const [typeTransactionAutre, setTypeTransactionAutre] = useState('')
   const [nbAvis, setNbAvis] = useState(0)
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -128,6 +139,8 @@ export function NouvelleVenteForm({
         carte_grise_montant: carteGrise === '' ? 0 : Number(carteGrise),
         extension_garantie_id: extensionGarantieId || null,
         origine_vente: origineVente,
+        type_transaction: typeTransaction || null,
+        type_transaction_autre: typeTransaction === 'autre' ? typeTransactionAutre || null : null,
         nb_avis: nbAvis,
       })
       .select('id')
@@ -330,6 +343,30 @@ export function NouvelleVenteForm({
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <div className="flex-1">
+            <label className="mb-1.5 block text-sm text-text-dim">Type de transaction</label>
+            <select
+              value={typeTransaction}
+              onChange={(e) => setTypeTransaction(e.target.value as TypeTransaction)}
+              className="w-full rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
+            >
+              <option value="">Sélectionner…</option>
+              {TYPES_TRANSACTION.map((t) => (
+                <option key={t.valeur} value={t.valeur}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {typeTransaction === 'autre' && (
+            <div className="flex-1">
+              <label className="mb-1.5 block text-sm text-text-dim">Précisez</label>
+              <Input value={typeTransactionAutre} onChange={(e) => setTypeTransactionAutre(e.target.value)} />
+            </div>
+          )}
         </div>
 
         <div>

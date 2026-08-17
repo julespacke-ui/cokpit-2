@@ -172,7 +172,7 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
         return trie.map((ligne, index) => ({ ...ligne, label: `Agence ${String.fromCharCode(65 + index)}` }))
       }
 
-      setLignes(etiqueter(lignesSansLabel.filter((l) => !l.agence.est_demo)))
+      setLignes(etiqueter(lignesSansLabel.filter((l) => !l.agence.est_demo && l.agence.est_client)))
       setLignesDemo(etiqueter(lignesSansLabel.filter((l) => l.agence.est_demo)))
       setChargement(false)
     })

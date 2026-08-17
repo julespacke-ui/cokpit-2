@@ -17,6 +17,15 @@ const ORIGINE_LABELS: Record<string, string> = {
   autre: 'Autre',
 }
 
+const TYPE_TRANSACTION_LABELS: Record<string, string> = {
+  depot_vente: 'Dépôt-vente',
+  achat_vente: 'Achat-vente',
+  export: 'Export',
+  import: 'Import',
+  courtage: 'Courtage',
+  autre: 'Autre',
+}
+
 interface VenteLigne {
   id: string
   date_vente: string
@@ -24,6 +33,8 @@ interface VenteLigne {
   prix_vente: number
   honoraires_reels: number
   origine_vente: string
+  type_transaction: string | null
+  type_transaction_autre: string | null
   nb_avis: number
   carte_grise_montant: number
   panier: number
@@ -91,6 +102,8 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
         prix_vente: v.prix_vente,
         honoraires_reels: v.honoraires_reels,
         origine_vente: v.origine_vente,
+        type_transaction: v.type_transaction,
+        type_transaction_autre: v.type_transaction_autre,
         nb_avis: v.nb_avis,
         carte_grise_montant: v.carte_grise_montant,
         commercial: v.profiles,
@@ -155,6 +168,14 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
                 <div className="text-right">
                   <p className="tabular-nums">{v.prix_vente.toLocaleString('fr-FR')} €</p>
                   <p className="text-sm text-text-dim">Origine : {ORIGINE_LABELS[v.origine_vente]}</p>
+                  {v.type_transaction && (
+                    <p className="text-sm text-text-dim">
+                      Type :{' '}
+                      {v.type_transaction === 'autre' && v.type_transaction_autre
+                        ? v.type_transaction_autre
+                        : TYPE_TRANSACTION_LABELS[v.type_transaction]}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-4 border-t border-line pt-3 text-sm">
