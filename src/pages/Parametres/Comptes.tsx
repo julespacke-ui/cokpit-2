@@ -32,6 +32,7 @@ function ModifierCompte({
   const [prenom, setPrenom] = useState(profil.prenom)
   const [nom, setNom] = useState(profil.nom)
   const [agenceId, setAgenceId] = useState(profil.agence_id ?? '')
+  const [role, setRole] = useState<'gerant' | 'commercial'>(profil.role === 'gerant' ? 'gerant' : 'commercial')
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -40,7 +41,7 @@ function ModifierCompte({
     setEnvoiEnCours(true)
     const { error } = await supabase
       .from('profiles')
-      .update({ prenom, nom, ...(agences ? { agence_id: agenceId } : {}) })
+      .update({ prenom, nom, ...(agences ? { agence_id: agenceId, role } : {}) })
       .eq('id', profil.id)
     setEnvoiEnCours(false)
     if (error) {
@@ -55,6 +56,16 @@ function ModifierCompte({
       <Input value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Prénom" className="w-40" />
       <Input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom" className="w-40" />
       {agences && <SelecteurAgence agences={agences} value={agenceId} onChange={setAgenceId} className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text" />}
+      {agences && (
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value as 'gerant' | 'commercial')}
+          className="rounded-lg border border-line bg-bg-elev-2 px-3 py-2 text-sm text-text"
+        >
+          <option value="commercial">Commercial</option>
+          <option value="gerant">Gérant</option>
+        </select>
+      )}
       <Button onClick={valider} disabled={envoiEnCours || !prenom.trim() || !nom.trim() || (!!agences && !agenceId)}>
         {envoiEnCours ? 'Enregistrement…' : 'Enregistrer'}
       </Button>
