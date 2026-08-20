@@ -307,9 +307,9 @@ function TableBenchmark({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-text-dim">
-              <th className="px-4 py-3 font-normal">Agence</th>
+              <th className="sticky left-0 z-10 whitespace-nowrap bg-bg-elev px-4 py-3 font-normal">Agence</th>
               {COLONNES.map((col) => (
-                <th key={col.cle} className="px-4 py-3 text-right font-normal">
+                <th key={col.cle} className="whitespace-nowrap px-4 py-3 text-right font-normal">
                   {col.label}
                 </th>
               ))}
@@ -324,26 +324,35 @@ function TableBenchmark({
               <tr
                 key={ligne.agence.id}
                 onClick={() => onClickAgence(ligne.agence.id)}
-                className={`cursor-pointer border-b border-l-4 border-line transition-colors duration-150 last:border-b-0 hover:bg-bg-elev-2 active:bg-bg-elev-2/70 ${
+                className={`group cursor-pointer border-b border-l-4 border-line transition-colors duration-150 last:border-b-0 hover:bg-bg-elev-2 active:bg-bg-elev-2/70 ${
                   ligne.objectifAtteint ? 'border-l-accent-2' : 'border-l-accent-4'
                 }`}
               >
-                <td className="px-4 py-3">
+                <td
+                  className="sticky left-0 z-10 max-w-[160px] truncate whitespace-nowrap bg-bg-elev px-4 py-3 group-hover:bg-bg-elev-2 group-active:bg-bg-elev-2/70 sm:max-w-none"
+                  title={`${ligne.agence.nom}${ligne.agence.ville ? ` (${ligne.agence.ville})` : ''}`}
+                >
                   {ligne.agence.nom}
                   {ligne.agence.ville && <span className="text-text-faint"> ({ligne.agence.ville})</span>}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{ligne.ventes}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>
-                <td className="px-4 py-3 text-right tabular-nums">
+                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{ligne.ventes}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                  {ligne.ca.toLocaleString('fr-FR')} €
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                   {Math.round(ligne.panierMoyen).toLocaleString('fr-FR')} €
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">
+                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                   {Math.round(ligne.honorairesMoyens).toLocaleString('fr-FR')} €
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{ligne.tauxRotation.toFixed(1)} %</td>
-                <td className="px-4 py-3 text-right tabular-nums">{ligne.mandats}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{ligne.ca.toLocaleString('fr-FR')} €</td>
-                <td className="px-4 py-3 text-right tabular-nums">
+                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                  {ligne.tauxRotation.toFixed(1)} %
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{ligne.mandats}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                  {ligne.ca.toLocaleString('fr-FR')} €
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                   {ecart === null ? (
                     <span className="text-text-faint">Baseline non définie</span>
                   ) : (
