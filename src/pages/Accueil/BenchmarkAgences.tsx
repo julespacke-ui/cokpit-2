@@ -242,6 +242,19 @@ const COLONNES: { cle: CleColonneTriable; label: string }[] = [
   { cle: 'evolutionBaseline', label: 'Évolution vs baseline' },
 ]
 
+/** Padding horizontal par colonne — resserré sur les colonnes denses
+ * (panier/honoraires/rotation), élargi sur les colonnes CA. */
+const PADDING_X: Record<CleColonneTriable, string> = {
+  ventes: 'px-4',
+  ca: 'px-6',
+  panierMoyen: 'px-2',
+  honorairesMoyens: 'px-2',
+  tauxRotation: 'px-2',
+  mandats: 'px-4',
+  caGenere: 'px-6',
+  evolutionBaseline: 'px-4',
+}
+
 function TableBenchmark({
   lignes,
   onClickAgence,
@@ -309,7 +322,7 @@ function TableBenchmark({
             <tr className="border-b border-line text-left text-text-dim">
               <th className="sticky left-0 z-10 whitespace-nowrap bg-bg-elev px-4 py-3 font-normal">Agence</th>
               {COLONNES.map((col) => (
-                <th key={col.cle} className="whitespace-nowrap px-4 py-3 text-right font-normal">
+                <th key={col.cle} className={`whitespace-nowrap ${PADDING_X[col.cle]} py-3 text-right font-normal`}>
                   {col.label}
                 </th>
               ))}
@@ -336,20 +349,20 @@ function TableBenchmark({
                   {ligne.agence.ville && <span className="text-text-faint"> ({ligne.agence.ville})</span>}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{ligne.ventes}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                <td className="whitespace-nowrap px-6 py-3 text-right tabular-nums">
                   {ligne.ca.toLocaleString('fr-FR')} €
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                <td className="whitespace-nowrap px-2 py-3 text-right tabular-nums">
                   {Math.round(ligne.panierMoyen).toLocaleString('fr-FR')} €
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                <td className="whitespace-nowrap px-2 py-3 text-right tabular-nums">
                   {Math.round(ligne.honorairesMoyens).toLocaleString('fr-FR')} €
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                <td className="whitespace-nowrap px-2 py-3 text-right tabular-nums">
                   {ligne.tauxRotation.toFixed(1)} %
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{ligne.mandats}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                <td className="whitespace-nowrap px-6 py-3 text-right tabular-nums">
                   {ligne.ca.toLocaleString('fr-FR')} €
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
