@@ -186,6 +186,23 @@ export function NouvelleVenteForm({
           </div>
         </div>
 
+        <div className="rounded-lg border border-accent-4/40 bg-accent-4/5 p-3">
+          <label className="mb-1.5 block text-sm font-medium text-accent-4">Origine de la vente</label>
+          <select
+            value={origineVente}
+            onChange={(e) => setOrigineVente(e.target.value as OrigineVente)}
+            className="w-full rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
+            required
+          >
+            <option value="">Sélectionner…</option>
+            {ORIGINES.map((o) => (
+              <option key={o.valeur} value={o.valeur}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div>
           <label className="mb-1.5 block text-sm text-text-dim">Prix de vente (€)</label>
           <Input
@@ -326,23 +343,6 @@ export function NouvelleVenteForm({
               + Ajouter un service
             </Button>
           </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm text-text-dim">Origine de la vente</label>
-          <select
-            value={origineVente}
-            onChange={(e) => setOrigineVente(e.target.value as OrigineVente)}
-            className="w-full rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
-            required
-          >
-            <option value="">Sélectionner…</option>
-            {ORIGINES.map((o) => (
-              <option key={o.valeur} value={o.valeur}>
-                {o.label}
-              </option>
-            ))}
-          </select>
         </div>
 
         <div className="flex flex-wrap gap-3">

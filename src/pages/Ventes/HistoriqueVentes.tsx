@@ -4,8 +4,10 @@ import { supabase } from '../../lib/supabase'
 import { calculerPanierVente } from '../../lib/calculs'
 import type { Profile } from '../../types/database'
 import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { SkeletonTableau } from '../../components/ui/Skeleton'
+import { Toast, useToast } from '../../components/ui/Toast'
 
 const ORIGINE_LABELS: Record<string, string> = {
   recommandation: 'Recommandation',
@@ -63,6 +65,12 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
   const [commerciaux, setCommerciaux] = useState<Profile[]>([])
   const [ventes, setVentes] = useState<VenteLigne[]>([])
   const [chargement, setChargement] = useState(true)
+  const [rafraichirLocal, setRafraichirLocal] = useState(0)
+  const [editionId, setEditionId] = useState<string | null>(null)
+  const [dateEdition, setDateEdition] = useState('')
+  const [suppressionId, setSuppressionId] = useState<string | null>(null)
+  const [actionEnCours, setActionEnCours] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     if (!estGerant) return
@@ -117,7 +125,50 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
       setVentes(lignes)
       setChargement(false)
     })
-  }, [agenceId, du, au, commercialId, estGerant, profile, rafraichir])
+  }, [agenceId, du, au, commercialId, estGerant, profile, rafraichir, rafraichirLocal])
+
+  function ouvrirEdition(v: VenteLigne) {
+    setSuppressionId(null)
+    setEditionId(v.id)
+    setDateEdition(v.date_vente)
+  }
+
+  async function enregistrerDate(id: string) {
+    setActionEnCours(true)
+    // .select() force le retour des lignes affectées : sans ça, une écriture
+    // silencieusement bloquée par les policies RLS (droits insuffisants)
+    // renvoie un tableau vide sans erreur, et on afficherait un succès à tort.
+    const { data, error } = await supabase.from('ventes').update({ date_vente: dateEdition }).eq('id', id).select('id')
+    setActionEnCours(false)
+    if (error) {
+      toast.montrer(error.message)
+      return
+    }
+    if (!data || data.length === 0) {
+      toast.montrer("Modification refusée (droits insuffisants)")
+      return
+    }
+    setEditionId(null)
+    setRafraichirLocal((r) => r + 1)
+    toast.montrer('Date mise à jour')
+  }
+
+  async function confirmerSuppression(id: string) {
+    setActionEnCours(true)
+    const { data, error } = await supabase.from('ventes').delete().eq('id', id).select('id')
+    setActionEnCours(false)
+    if (error) {
+      toast.montrer(error.message)
+      return
+    }
+    if (!data || data.length === 0) {
+      toast.montrer("Suppression refusée (droits insuffisants)")
+      return
+    }
+    setSuppressionId(null)
+    setRafraichirLocal((r) => r + 1)
+    toast.montrer('Vente supprimée')
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -160,10 +211,19 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-medium">{v.vehicule}</p>
-                  <p className="text-sm text-text-dim">
-                    {FORMAT_DATE.format(new Date(v.date_vente))}
-                    {estGerant && v.commercial && ` — ${v.commercial.prenom} ${v.commercial.nom}`}
-                  </p>
+                  {editionId === v.id ? (
+                    <Input
+                      type="date"
+                      value={dateEdition}
+                      onChange={(e) => setDateEdition(e.target.value)}
+                      className="mt-1 w-auto"
+                    />
+                  ) : (
+                    <p className="text-sm text-text-dim">
+                      {FORMAT_DATE.format(new Date(v.date_vente))}
+                      {estGerant && v.commercial && ` — ${v.commercial.prenom} ${v.commercial.nom}`}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="tabular-nums">{v.prix_vente.toLocaleString('fr-FR')} €</p>
@@ -178,22 +238,62 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
                   )}
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-4 border-t border-line pt-3 text-sm">
-                <span>
-                  Honoraires réels : <strong className="tabular-nums">{v.honoraires_reels.toLocaleString('fr-FR')} €</strong>
-                </span>
-                <span>
-                  Panier moyen TTC : <strong className="tabular-nums">{v.panier.toLocaleString('fr-FR')} €</strong>
-                </span>
-                <span>
-                  Carte grise : <strong className="tabular-nums">{v.carte_grise_montant.toLocaleString('fr-FR')} €</strong>
-                </span>
-                <span>Avis reçus : {v.nb_avis}/2</span>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-sm">
+                <div className="flex flex-wrap gap-4">
+                  <span>
+                    Honoraires réels : <strong className="tabular-nums">{v.honoraires_reels.toLocaleString('fr-FR')} €</strong>
+                  </span>
+                  <span>
+                    Panier moyen TTC : <strong className="tabular-nums">{v.panier.toLocaleString('fr-FR')} €</strong>
+                  </span>
+                  <span>
+                    Carte grise : <strong className="tabular-nums">{v.carte_grise_montant.toLocaleString('fr-FR')} €</strong>
+                  </span>
+                  <span>Avis reçus : {v.nb_avis}/2</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {editionId === v.id ? (
+                    <>
+                      <Button type="button" onClick={() => enregistrerDate(v.id)} disabled={actionEnCours}>
+                        Enregistrer
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => setEditionId(null)}>
+                        Annuler
+                      </Button>
+                    </>
+                  ) : suppressionId === v.id ? (
+                    <>
+                      <span className="text-text-dim">Confirmer la suppression ?</span>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        onClick={() => confirmerSuppression(v.id)}
+                        disabled={actionEnCours}
+                      >
+                        Confirmer
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => setSuppressionId(null)}>
+                        Annuler
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button type="button" variant="secondary" onClick={() => ouvrirEdition(v)}>
+                        Modifier la date
+                      </Button>
+                      <Button type="button" variant="danger" onClick={() => setSuppressionId(v.id)}>
+                        Supprimer
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      <Toast message={toast.message} cle={toast.cle} onFermer={toast.fermer} />
     </div>
   )
 }
