@@ -4,6 +4,7 @@ import type { ConfigRemuneration } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
 import { ChampsTauxRemuneration } from '../../components/ui/ChampsTauxRemuneration'
 
 const TAUX_PAR_DEFAUT: ConfigRemuneration = {
@@ -53,12 +54,19 @@ export function Remuneration({ agenceId }: { agenceId: string }) {
         vente. Chaque taux est un pourcentage de cette base ou une prime fixe, au choix. Un commercial peut avoir
         des taux personnalisés (Paramètres → Comptes) qui remplacent ceux-ci un par un.
       </p>
-      <p className="mb-4 text-sm text-text-dim">
-        L'extension de garantie n'est pas paramétrable ici : la part versée est toujours 50 % de la commission
-        agence définie sur la fiche de l'extension (Paramètres → Extensions de garantie).
-      </p>
-
       <ChampsTauxRemuneration config={config} onChange={setConfig} />
+
+      <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
+        <label className="w-40 shrink-0 text-sm text-text-dim">Extension de garantie</label>
+        <select disabled value="pourcentage" className="rounded-lg border border-line bg-bg-elev-2 px-3 py-3 text-sm text-text opacity-60">
+          <option value="pourcentage">Pourcentage</option>
+        </select>
+        <Input value="50" disabled className="w-28 opacity-60" />
+        <span className="text-text-faint">%</span>
+        <span className="text-sm text-text-faint">
+          de la commission agence de l'extension vendue — pas du panier ci-dessus, non modifiable
+        </span>
+      </div>
 
       {message && <p className="mt-4 text-sm text-text-dim">{message}</p>}
 
