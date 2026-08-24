@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { calculerPanierVente } from '../../lib/calculs'
-import type { Profile } from '../../types/database'
+import type { BaremeHonoraires, ExtensionGarantie, OrigineVente, PackMer, Profile, TypeTransaction } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { SkeletonTableau } from '../../components/ui/Skeleton'
 import { Toast, useToast } from '../../components/ui/Toast'
+import { NouvelleVenteForm } from './NouvelleVenteForm'
 
 const ORIGINE_LABELS: Record<string, string> = {
   recommandation: 'Recommandation',
@@ -34,11 +35,20 @@ interface VenteLigne {
   vehicule: string
   prix_vente: number
   honoraires_reels: number
-  origine_vente: string
-  type_transaction: string | null
+  pack_mer_id: string | null
+  pack_mer_prix_applique: number | null
+  carte_grise_montant: number
+  extension_garantie_id: string | null
+  origine_vente: OrigineVente
+  type_transaction: TypeTransaction | null
   type_transaction_autre: string | null
   nb_avis: number
-  carte_grise_montant: number
+  rdv_commercial_id: string | null
+  mandat_commercial_id: string | null
+  reservation_commercial_id: string | null
+  livraison_commercial_id: string | null
+  extension_commercial_id: string | null
+  vente_services: { libelle: string; prix: number }[]
   panier: number
   commercial: { prenom: string; nom: string } | null
 }
@@ -55,7 +65,15 @@ function aujourdHui(): string {
 
 const FORMAT_DATE = new Intl.DateTimeFormat('fr-FR')
 
-export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; rafraichir: number }) {
+interface HistoriqueVentesProps {
+  agenceId: string
+  rafraichir: number
+  bareme: BaremeHonoraires | null
+  packs: PackMer[]
+  extensions: ExtensionGarantie[]
+}
+
+export function HistoriqueVentes({ agenceId, rafraichir, bareme, packs, extensions }: HistoriqueVentesProps) {
   const { profile } = useAuth()
   const voitToutesLesVentes = profile?.role === 'gerant' || profile?.role === 'admin'
 
@@ -66,14 +84,15 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
   const [ventes, setVentes] = useState<VenteLigne[]>([])
   const [chargement, setChargement] = useState(true)
   const [rafraichirLocal, setRafraichirLocal] = useState(0)
-  const [editionId, setEditionId] = useState<string | null>(null)
-  const [dateEdition, setDateEdition] = useState('')
+  const [venteEnEditionId, setVenteEnEditionId] = useState<string | null>(null)
   const [suppressionId, setSuppressionId] = useState<string | null>(null)
   const [actionEnCours, setActionEnCours] = useState(false)
   const toast = useToast()
 
+  // Toujours chargée (pas seulement pour gérant/admin) : un commercial édite
+  // aussi ses propres ventes et doit pouvoir attribuer chaque étape à
+  // n'importe quel collègue de l'agence.
   useEffect(() => {
-    if (!voitToutesLesVentes) return
     supabase
       .from('profiles')
       .select('*')
@@ -82,7 +101,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
       .eq('actif', true)
       .order('prenom')
       .then(({ data }) => setCommerciaux(data ?? []))
-  }, [agenceId, voitToutesLesVentes])
+  }, [agenceId])
 
   useEffect(() => {
     if (!profile) return
@@ -91,7 +110,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
     let requete = supabase
       .from('ventes')
       .select(
-        '*, extensions_garantie(prix_client), vente_services(prix), profiles!ventes_commercial_id_fkey(prenom, nom)',
+        '*, extensions_garantie(prix_client), vente_services(libelle, prix), profiles!ventes_commercial_id_fkey(prenom, nom)',
       )
       .eq('agence_id', agenceId)
       .gte('date_vente', du)
@@ -111,11 +130,20 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
         vehicule: v.vehicule,
         prix_vente: v.prix_vente,
         honoraires_reels: v.honoraires_reels,
+        pack_mer_id: v.pack_mer_id,
+        pack_mer_prix_applique: v.pack_mer_prix_applique,
+        carte_grise_montant: v.carte_grise_montant,
+        extension_garantie_id: v.extension_garantie_id,
         origine_vente: v.origine_vente,
         type_transaction: v.type_transaction,
         type_transaction_autre: v.type_transaction_autre,
         nb_avis: v.nb_avis,
-        carte_grise_montant: v.carte_grise_montant,
+        rdv_commercial_id: v.rdv_commercial_id,
+        mandat_commercial_id: v.mandat_commercial_id,
+        reservation_commercial_id: v.reservation_commercial_id,
+        livraison_commercial_id: v.livraison_commercial_id,
+        extension_commercial_id: v.extension_commercial_id,
+        vente_services: v.vente_services ?? [],
         commercial: v.profiles,
         panier: calculerPanierVente({
           honorairesReels: v.honoraires_reels,
@@ -128,32 +156,6 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
       setChargement(false)
     })
   }, [agenceId, du, au, commercialId, voitToutesLesVentes, profile, rafraichir, rafraichirLocal])
-
-  function ouvrirEdition(v: VenteLigne) {
-    setSuppressionId(null)
-    setEditionId(v.id)
-    setDateEdition(v.date_vente)
-  }
-
-  async function enregistrerDate(id: string) {
-    setActionEnCours(true)
-    // .select() force le retour des lignes affectées : sans ça, une écriture
-    // silencieusement bloquée par les policies RLS (droits insuffisants)
-    // renvoie un tableau vide sans erreur, et on afficherait un succès à tort.
-    const { data, error } = await supabase.from('ventes').update({ date_vente: dateEdition }).eq('id', id).select('id')
-    setActionEnCours(false)
-    if (error) {
-      toast.montrer(error.message)
-      return
-    }
-    if (!data || data.length === 0) {
-      toast.montrer("Modification refusée (droits insuffisants)")
-      return
-    }
-    setEditionId(null)
-    setRafraichirLocal((r) => r + 1)
-    toast.montrer('Date mise à jour')
-  }
 
   async function confirmerSuppression(id: string) {
     setActionEnCours(true)
@@ -208,90 +210,92 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
         <p className="text-text-dim">Aucune vente sur cette période.</p>
       ) : (
         <div className="flex flex-col gap-3">
-          {ventes.map((v) => (
-            <Card key={v.id}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium">{v.vehicule}</p>
-                  {editionId === v.id ? (
-                    <Input
-                      type="date"
-                      value={dateEdition}
-                      onChange={(e) => setDateEdition(e.target.value)}
-                      className="mt-1 w-auto"
-                    />
-                  ) : (
+          {ventes.map((v) =>
+            venteEnEditionId === v.id ? (
+              <NouvelleVenteForm
+                key={v.id}
+                agenceId={agenceId}
+                bareme={bareme}
+                packs={packs}
+                extensions={extensions}
+                commerciaux={commerciaux}
+                venteExistante={v}
+                onSauvegarde={() => {
+                  setVenteEnEditionId(null)
+                  setRafraichirLocal((r) => r + 1)
+                  toast.montrer('Vente mise à jour')
+                }}
+                onCancel={() => setVenteEnEditionId(null)}
+              />
+            ) : (
+              <Card key={v.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{v.vehicule}</p>
                     <p className="text-sm text-text-dim">
                       {FORMAT_DATE.format(new Date(v.date_vente))}
                       {voitToutesLesVentes && v.commercial && ` — ${v.commercial.prenom} ${v.commercial.nom}`}
                     </p>
-                  )}
+                  </div>
+                  <div className="text-right">
+                    <p className="tabular-nums">{v.prix_vente.toLocaleString('fr-FR')} €</p>
+                    <p className="text-sm text-text-dim">Origine : {ORIGINE_LABELS[v.origine_vente]}</p>
+                    {v.type_transaction && (
+                      <p className="text-sm text-text-dim">
+                        Type :{' '}
+                        {v.type_transaction === 'autre' && v.type_transaction_autre
+                          ? v.type_transaction_autre
+                          : TYPE_TRANSACTION_LABELS[v.type_transaction]}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="tabular-nums">{v.prix_vente.toLocaleString('fr-FR')} €</p>
-                  <p className="text-sm text-text-dim">Origine : {ORIGINE_LABELS[v.origine_vente]}</p>
-                  {v.type_transaction && (
-                    <p className="text-sm text-text-dim">
-                      Type :{' '}
-                      {v.type_transaction === 'autre' && v.type_transaction_autre
-                        ? v.type_transaction_autre
-                        : TYPE_TRANSACTION_LABELS[v.type_transaction]}
-                    </p>
-                  )}
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-sm">
+                  <div className="flex flex-wrap gap-4">
+                    <span>
+                      Honoraires réels :{' '}
+                      <strong className="tabular-nums">{v.honoraires_reels.toLocaleString('fr-FR')} €</strong>
+                    </span>
+                    <span>
+                      Panier moyen TTC : <strong className="tabular-nums">{v.panier.toLocaleString('fr-FR')} €</strong>
+                    </span>
+                    <span>
+                      Carte grise :{' '}
+                      <strong className="tabular-nums">{v.carte_grise_montant.toLocaleString('fr-FR')} €</strong>
+                    </span>
+                    <span>Avis reçus : {v.nb_avis}/2</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {suppressionId === v.id ? (
+                      <>
+                        <span className="text-text-dim">Confirmer la suppression ?</span>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          onClick={() => confirmerSuppression(v.id)}
+                          disabled={actionEnCours}
+                        >
+                          Confirmer
+                        </Button>
+                        <Button type="button" variant="secondary" onClick={() => setSuppressionId(null)}>
+                          Annuler
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button type="button" variant="secondary" onClick={() => setVenteEnEditionId(v.id)}>
+                          Modifier
+                        </Button>
+                        <Button type="button" variant="danger" onClick={() => setSuppressionId(v.id)}>
+                          Supprimer
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-sm">
-                <div className="flex flex-wrap gap-4">
-                  <span>
-                    Honoraires réels : <strong className="tabular-nums">{v.honoraires_reels.toLocaleString('fr-FR')} €</strong>
-                  </span>
-                  <span>
-                    Panier moyen TTC : <strong className="tabular-nums">{v.panier.toLocaleString('fr-FR')} €</strong>
-                  </span>
-                  <span>
-                    Carte grise : <strong className="tabular-nums">{v.carte_grise_montant.toLocaleString('fr-FR')} €</strong>
-                  </span>
-                  <span>Avis reçus : {v.nb_avis}/2</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {editionId === v.id ? (
-                    <>
-                      <Button type="button" onClick={() => enregistrerDate(v.id)} disabled={actionEnCours}>
-                        Enregistrer
-                      </Button>
-                      <Button type="button" variant="secondary" onClick={() => setEditionId(null)}>
-                        Annuler
-                      </Button>
-                    </>
-                  ) : suppressionId === v.id ? (
-                    <>
-                      <span className="text-text-dim">Confirmer la suppression ?</span>
-                      <Button
-                        type="button"
-                        variant="danger"
-                        onClick={() => confirmerSuppression(v.id)}
-                        disabled={actionEnCours}
-                      >
-                        Confirmer
-                      </Button>
-                      <Button type="button" variant="secondary" onClick={() => setSuppressionId(null)}>
-                        Annuler
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button type="button" variant="secondary" onClick={() => ouvrirEdition(v)}>
-                        Modifier la date
-                      </Button>
-                      <Button type="button" variant="danger" onClick={() => setSuppressionId(v.id)}>
-                        Supprimer
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ),
+          )}
         </div>
       )}
 

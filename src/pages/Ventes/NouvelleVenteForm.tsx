@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { calculerHonorairesPreconises, calculerPanierVente } from '../../lib/calculs'
 import type {
@@ -45,14 +45,40 @@ function aujourdHui(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+export interface VenteExistante {
+  id: string
+  date_vente: string
+  vehicule: string
+  prix_vente: number
+  honoraires_reels: number
+  pack_mer_id: string | null
+  pack_mer_prix_applique: number | null
+  carte_grise_montant: number
+  extension_garantie_id: string | null
+  origine_vente: OrigineVente
+  type_transaction: TypeTransaction | null
+  type_transaction_autre: string | null
+  nb_avis: number
+  rdv_commercial_id: string | null
+  mandat_commercial_id: string | null
+  reservation_commercial_id: string | null
+  livraison_commercial_id: string | null
+  extension_commercial_id: string | null
+  vente_services: { libelle: string; prix: number }[]
+}
+
 interface NouvelleVenteFormProps {
   agenceId: string
-  commercialId: string
+  /** Requis à la création (propriétaire de la vente) ; ignoré en édition. */
+  commercialId?: string
   bareme: BaremeHonoraires | null
   packs: PackMer[]
   extensions: ExtensionGarantie[]
   commerciaux: Profile[]
-  onCreated: () => void
+  /** Fournie en mode édition : pré-remplit le formulaire et bascule les
+   * boutons/l'envoi sur une mise à jour plutôt qu'une création. */
+  venteExistante?: VenteExistante
+  onSauvegarde: () => void
   onCancel: () => void
 }
 
@@ -63,28 +89,37 @@ export function NouvelleVenteForm({
   packs,
   extensions,
   commerciaux,
-  onCreated,
+  venteExistante,
+  onSauvegarde,
   onCancel,
 }: NouvelleVenteFormProps) {
-  const [dateVente, setDateVente] = useState(aujourdHui())
-  const [vehicule, setVehicule] = useState('')
-  const [prixVente, setPrixVente] = useState<number | ''>('')
-  const [honorairesReels, setHonorairesReels] = useState<number | ''>('')
-  const [honorairesToucheManuel, setHonorairesToucheManuel] = useState(false)
-  const [packMerId, setPackMerId] = useState('')
-  const [prixMerApplique, setPrixMerApplique] = useState<number | ''>('')
-  const [carteGrise, setCarteGrise] = useState<number | ''>('')
-  const [extensionGarantieId, setExtensionGarantieId] = useState('')
-  const [services, setServices] = useState<{ libelle: string; prix: number }[]>([])
-  const [origineVente, setOrigineVente] = useState<OrigineVente | ''>('')
-  const [typeTransaction, setTypeTransaction] = useState<TypeTransaction | ''>('')
-  const [typeTransactionAutre, setTypeTransactionAutre] = useState('')
-  const [nbAvis, setNbAvis] = useState(0)
-  const [rdvCommercialId, setRdvCommercialId] = useState('')
-  const [mandatCommercialId, setMandatCommercialId] = useState('')
-  const [reservationCommercialId, setReservationCommercialId] = useState('')
-  const [livraisonCommercialId, setLivraisonCommercialId] = useState('')
-  const [extensionCommercialId, setExtensionCommercialId] = useState('')
+  const [dateVente, setDateVente] = useState(venteExistante?.date_vente ?? aujourdHui())
+  const [vehicule, setVehicule] = useState(venteExistante?.vehicule ?? '')
+  const [prixVente, setPrixVente] = useState<number | ''>(venteExistante?.prix_vente ?? '')
+  const [honorairesReels, setHonorairesReels] = useState<number | ''>(venteExistante?.honoraires_reels ?? '')
+  // En édition, les honoraires chargés sont déjà la valeur réelle négociée :
+  // on ne veut jamais les écraser avec le préconisé recalculé du barème actuel.
+  const [honorairesToucheManuel, setHonorairesToucheManuel] = useState(!!venteExistante)
+  const [packMerId, setPackMerId] = useState(venteExistante?.pack_mer_id ?? '')
+  const [prixMerApplique, setPrixMerApplique] = useState<number | ''>(venteExistante?.pack_mer_prix_applique ?? '')
+  const [carteGrise, setCarteGrise] = useState<number | ''>(venteExistante?.carte_grise_montant ?? '')
+  const [extensionGarantieId, setExtensionGarantieId] = useState(venteExistante?.extension_garantie_id ?? '')
+  const [services, setServices] = useState<{ libelle: string; prix: number }[]>(
+    venteExistante?.vente_services ?? [],
+  )
+  const [origineVente, setOrigineVente] = useState<OrigineVente | ''>(venteExistante?.origine_vente ?? '')
+  const [typeTransaction, setTypeTransaction] = useState<TypeTransaction | ''>(
+    venteExistante?.type_transaction ?? '',
+  )
+  const [typeTransactionAutre, setTypeTransactionAutre] = useState(venteExistante?.type_transaction_autre ?? '')
+  const [nbAvis, setNbAvis] = useState(venteExistante?.nb_avis ?? 0)
+  const [rdvCommercialId, setRdvCommercialId] = useState(venteExistante?.rdv_commercial_id ?? '')
+  const [mandatCommercialId, setMandatCommercialId] = useState(venteExistante?.mandat_commercial_id ?? '')
+  const [reservationCommercialId, setReservationCommercialId] = useState(
+    venteExistante?.reservation_commercial_id ?? '',
+  )
+  const [livraisonCommercialId, setLivraisonCommercialId] = useState(venteExistante?.livraison_commercial_id ?? '')
+  const [extensionCommercialId, setExtensionCommercialId] = useState(venteExistante?.extension_commercial_id ?? '')
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -96,8 +131,8 @@ export function NouvelleVenteForm({
   }
 
   useEffect(() => {
-    if (packs.length === 1) setPackMerId(packs[0].id)
-  }, [packs])
+    if (!venteExistante && packs.length === 1) setPackMerId(packs[0].id)
+  }, [packs, venteExistante])
 
   const honorairesPreconises = useMemo(() => {
     if (prixVente === '' || !bareme) return 0
@@ -105,17 +140,25 @@ export function NouvelleVenteForm({
   }, [prixVente, bareme])
 
   useEffect(() => {
-    if (!honorairesToucheManuel) setHonorairesReels(honorairesPreconises)
-  }, [honorairesPreconises, honorairesToucheManuel])
+    if (!venteExistante && !honorairesToucheManuel) setHonorairesReels(honorairesPreconises)
+  }, [honorairesPreconises, honorairesToucheManuel, venteExistante])
 
   const packSelectionne = packs.find((p) => p.id === packMerId)
   const extensionSelectionnee = extensions.find((e) => e.id === extensionGarantieId)
 
   // Le prix par défaut du pack se réinitialise à chaque changement de pack
   // sélectionné (y compris désélection), mais reste éditable ensuite si le
-  // client a négocié un autre montant.
+  // client a négocié un autre montant. Le tout premier rendu en édition fait
+  // exception : le montant chargé (potentiellement négocié) ne doit pas être
+  // écrasé par le prix catalogue juste parce que packMerId vient d'être posé.
+  const premierRendu = useRef(true)
   useEffect(() => {
+    if (premierRendu.current) {
+      premierRendu.current = false
+      if (venteExistante) return
+    }
     setPrixMerApplique(packSelectionne ? packSelectionne.prix : '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [packMerId])
 
   const panier = useMemo(
@@ -152,43 +195,68 @@ export function NouvelleVenteForm({
 
     setEnvoiEnCours(true)
 
-    const { data: vente, error } = await supabase
-      .from('ventes')
-      .insert({
-        commercial_id: commercialId,
-        agence_id: agenceId,
-        date_vente: dateVente,
-        vehicule,
-        prix_vente: Number(prixVente),
-        honoraires_preconises: honorairesPreconises,
-        honoraires_reels: Number(honorairesReels),
-        pack_mer_id: packMerId || null,
-        pack_mer_prix_applique: packMerId ? (prixMerApplique === '' ? 0 : Number(prixMerApplique)) : null,
-        carte_grise_montant: carteGrise === '' ? 0 : Number(carteGrise),
-        extension_garantie_id: extensionGarantieId || null,
-        origine_vente: origineVente,
-        type_transaction: typeTransaction || null,
-        type_transaction_autre: typeTransaction === 'autre' ? typeTransactionAutre || null : null,
-        nb_avis: nbAvis,
-        rdv_commercial_id: rdvCommercialId || null,
-        mandat_commercial_id: mandatCommercialId || null,
-        reservation_commercial_id: reservationCommercialId || null,
-        livraison_commercial_id: livraisonCommercialId || null,
-        extension_commercial_id: extensionGarantieId ? extensionCommercialId || null : null,
-      })
-      .select('id')
-      .single()
+    const champs = {
+      date_vente: dateVente,
+      vehicule,
+      prix_vente: Number(prixVente),
+      honoraires_preconises: honorairesPreconises,
+      honoraires_reels: Number(honorairesReels),
+      pack_mer_id: packMerId || null,
+      pack_mer_prix_applique: packMerId ? (prixMerApplique === '' ? 0 : Number(prixMerApplique)) : null,
+      carte_grise_montant: carteGrise === '' ? 0 : Number(carteGrise),
+      extension_garantie_id: extensionGarantieId || null,
+      origine_vente: origineVente,
+      type_transaction: typeTransaction || null,
+      type_transaction_autre: typeTransaction === 'autre' ? typeTransactionAutre || null : null,
+      nb_avis: nbAvis,
+      rdv_commercial_id: rdvCommercialId || null,
+      mandat_commercial_id: mandatCommercialId || null,
+      reservation_commercial_id: reservationCommercialId || null,
+      livraison_commercial_id: livraisonCommercialId || null,
+      extension_commercial_id: extensionGarantieId ? extensionCommercialId || null : null,
+    }
 
-    if (error || !vente) {
-      setEnvoiEnCours(false)
-      setErreur(error?.message ?? 'Erreur lors de la création de la vente.')
-      return
+    let venteId: string
+
+    if (venteExistante) {
+      // .select() force le retour des lignes affectées : sans ça, une
+      // écriture bloquée par les policies RLS renvoie un tableau vide sans
+      // erreur, et on afficherait un succès à tort.
+      const { data, error } = await supabase.from('ventes').update(champs).eq('id', venteExistante.id).select('id')
+      if (error || !data || data.length === 0) {
+        setEnvoiEnCours(false)
+        setErreur(error?.message ?? 'Modification refusée (droits insuffisants).')
+        return
+      }
+      venteId = venteExistante.id
+
+      // Les services n'ont pas d'identité propre côté formulaire (pas d'id
+      // suivi ligne à ligne) : on remplace tout le lot plutôt que de diffing.
+      const { error: erreurSuppr } = await supabase.from('vente_services').delete().eq('vente_id', venteId)
+      if (erreurSuppr) {
+        setEnvoiEnCours(false)
+        setErreur(erreurSuppr.message)
+        return
+      }
+    } else {
+      const { data: vente, error } = await supabase
+        .from('ventes')
+        .insert({ commercial_id: commercialId!, agence_id: agenceId, ...champs })
+        .select('id')
+        .single()
+
+      if (error || !vente) {
+        setEnvoiEnCours(false)
+        setErreur(error?.message ?? 'Erreur lors de la création de la vente.')
+        return
+      }
+      venteId = vente.id
     }
 
     if (services.length > 0) {
       const { error: erreurServices } = await supabase
         .from('vente_services')
-        .insert(services.map((s) => ({ vente_id: vente.id, libelle: s.libelle, prix: s.prix })))
+        .insert(services.map((s) => ({ vente_id: venteId, libelle: s.libelle, prix: s.prix })))
       if (erreurServices) {
         setEnvoiEnCours(false)
         setErreur(erreurServices.message)
@@ -197,7 +265,7 @@ export function NouvelleVenteForm({
     }
 
     setEnvoiEnCours(false)
-    onCreated()
+    onSauvegarde()
   }
 
   return (
@@ -470,7 +538,13 @@ export function NouvelleVenteForm({
 
         <div className="flex gap-3">
           <Button type="submit" disabled={envoiEnCours}>
-            {envoiEnCours ? 'Création…' : 'Créer la fiche'}
+            {venteExistante
+              ? envoiEnCours
+                ? 'Enregistrement…'
+                : 'Enregistrer les modifications'
+              : envoiEnCours
+                ? 'Création…'
+                : 'Créer la fiche'}
           </Button>
           <Button type="button" variant="secondary" onClick={onCancel}>
             Annuler

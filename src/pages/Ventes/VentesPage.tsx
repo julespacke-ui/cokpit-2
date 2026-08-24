@@ -87,7 +87,7 @@ export function VentesPage() {
             packs={packs}
             extensions={extensions}
             commerciaux={commerciaux}
-            onCreated={() => {
+            onSauvegarde={() => {
               setFormulaireOuvert(false)
               setRafraichir((r) => r + 1)
               toast.montrer('Vente enregistrée')
@@ -97,7 +97,14 @@ export function VentesPage() {
         </div>
       )}
 
-      <HistoriqueVentes key={agenceId} agenceId={agenceId} rafraichir={rafraichir} />
+      <HistoriqueVentes
+        key={agenceId}
+        agenceId={agenceId}
+        rafraichir={rafraichir}
+        bareme={bareme}
+        packs={packs}
+        extensions={extensions}
+      />
 
       <Toast message={toast.message} cle={toast.cle} onFermer={toast.fermer} />
     </div>
