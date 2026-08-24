@@ -90,7 +90,9 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
 
     let requete = supabase
       .from('ventes')
-      .select('*, extensions_garantie(prix_client), vente_services(prix), profiles(prenom, nom)')
+      .select(
+        '*, extensions_garantie(prix_client), vente_services(prix), profiles!ventes_commercial_id_fkey(prenom, nom)',
+      )
       .eq('agence_id', agenceId)
       .gte('date_vente', du)
       .lte('date_vente', au)
