@@ -10,10 +10,20 @@ import { Comptes } from './Comptes'
 import { Objectifs } from './Objectifs'
 import { PlansAction } from './PlansAction'
 import { Ressources } from './Ressources'
+import { Remuneration } from './Remuneration'
 import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
 import { agenceParDefaut } from '../../lib/agences'
 
-type Onglet = 'agences' | 'bareme' | 'packs' | 'extensions' | 'comptes' | 'objectifs' | 'plans_action' | 'ressources'
+type Onglet =
+  | 'agences'
+  | 'bareme'
+  | 'packs'
+  | 'extensions'
+  | 'comptes'
+  | 'objectifs'
+  | 'remuneration'
+  | 'plans_action'
+  | 'ressources'
 
 export function ParametresPage() {
   const { profile } = useAuth()
@@ -52,6 +62,7 @@ export function ParametresPage() {
     { id: 'extensions' as const, label: 'Extensions garantie' },
     { id: 'comptes' as const, label: 'Comptes' },
     { id: 'objectifs' as const, label: 'Objectifs' },
+    { id: 'remuneration' as const, label: 'Rémunération' },
     ...(estAdmin ? [{ id: 'plans_action' as const, label: "Plans d'action" }] : []),
     ...(estAdmin ? [{ id: 'ressources' as const, label: 'Ressources' }] : []),
   ]
@@ -94,6 +105,7 @@ export function ParametresPage() {
           <Comptes agenceId={agenceSelectionneeId} peutChoisirRole={estAdmin} agences={agences} />
         )}
         {onglet === 'objectifs' && agenceSelectionneeId && <Objectifs agenceId={agenceSelectionneeId} />}
+        {onglet === 'remuneration' && agenceSelectionneeId && <Remuneration agenceId={agenceSelectionneeId} />}
         {onglet === 'plans_action' && estAdmin && agenceSelectionneeId && (
           <PlansAction agenceId={agenceSelectionneeId} />
         )}

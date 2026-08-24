@@ -1,11 +1,25 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { calculerHonorairesPreconises, calculerPanierVente } from '../../lib/calculs'
-import type { BaremeHonoraires, ExtensionGarantie, OrigineVente, PackMer, TypeTransaction } from '../../types/database'
+import type {
+  BaremeHonoraires,
+  ExtensionGarantie,
+  OrigineVente,
+  PackMer,
+  Profile,
+  TypeTransaction,
+} from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Toggle } from '../../components/ui/Toggle'
+
+const CHAMPS_ATTRIBUTION = [
+  { cle: 'rdvCommercialId', label: 'RDV pris' },
+  { cle: 'mandatCommercialId', label: 'Mandat rentré' },
+  { cle: 'reservationCommercialId', label: 'Véhicule réservé' },
+  { cle: 'livraisonCommercialId', label: 'Véhicule livré' },
+] as const
 
 const ORIGINES: { valeur: OrigineVente; label: string }[] = [
   { valeur: 'recommandation', label: 'Recommandation' },
@@ -37,6 +51,7 @@ interface NouvelleVenteFormProps {
   bareme: BaremeHonoraires | null
   packs: PackMer[]
   extensions: ExtensionGarantie[]
+  commerciaux: Profile[]
   onCreated: () => void
   onCancel: () => void
 }
@@ -47,6 +62,7 @@ export function NouvelleVenteForm({
   bareme,
   packs,
   extensions,
+  commerciaux,
   onCreated,
   onCancel,
 }: NouvelleVenteFormProps) {
@@ -64,8 +80,20 @@ export function NouvelleVenteForm({
   const [typeTransaction, setTypeTransaction] = useState<TypeTransaction | ''>('')
   const [typeTransactionAutre, setTypeTransactionAutre] = useState('')
   const [nbAvis, setNbAvis] = useState(0)
+  const [rdvCommercialId, setRdvCommercialId] = useState('')
+  const [mandatCommercialId, setMandatCommercialId] = useState('')
+  const [reservationCommercialId, setReservationCommercialId] = useState('')
+  const [livraisonCommercialId, setLivraisonCommercialId] = useState('')
+  const [extensionCommercialId, setExtensionCommercialId] = useState('')
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+
+  const attribution: Record<(typeof CHAMPS_ATTRIBUTION)[number]['cle'], [string, (v: string) => void]> = {
+    rdvCommercialId: [rdvCommercialId, setRdvCommercialId],
+    mandatCommercialId: [mandatCommercialId, setMandatCommercialId],
+    reservationCommercialId: [reservationCommercialId, setReservationCommercialId],
+    livraisonCommercialId: [livraisonCommercialId, setLivraisonCommercialId],
+  }
 
   useEffect(() => {
     if (packs.length === 1) setPackMerId(packs[0].id)
@@ -142,6 +170,11 @@ export function NouvelleVenteForm({
         type_transaction: typeTransaction || null,
         type_transaction_autre: typeTransaction === 'autre' ? typeTransactionAutre || null : null,
         nb_avis: nbAvis,
+        rdv_commercial_id: rdvCommercialId || null,
+        mandat_commercial_id: mandatCommercialId || null,
+        reservation_commercial_id: reservationCommercialId || null,
+        livraison_commercial_id: livraisonCommercialId || null,
+        extension_commercial_id: extensionGarantieId ? extensionCommercialId || null : null,
       })
       .select('id')
       .single()
@@ -382,6 +415,51 @@ export function NouvelleVenteForm({
             <option value={1}>1</option>
             <option value={2}>2</option>
           </select>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm text-text-dim">
+            Attribution — qui a réalisé chaque étape (sert au calcul de rémunération, laisser vide si inconnu)
+          </label>
+          <div className="flex flex-col gap-2">
+            {CHAMPS_ATTRIBUTION.map(({ cle, label }) => {
+              const [valeur, setValeur] = attribution[cle]
+              return (
+                <div key={cle} className="flex flex-wrap items-center gap-3">
+                  <label className="w-40 shrink-0 text-sm text-text-dim">{label}</label>
+                  <select
+                    value={valeur}
+                    onChange={(e) => setValeur(e.target.value)}
+                    className="flex-1 rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
+                  >
+                    <option value="">—</option>
+                    {commerciaux.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.prenom} {c.nom}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )
+            })}
+            {extensionGarantieId && (
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="w-40 shrink-0 text-sm text-text-dim">Extension vendue</label>
+                <select
+                  value={extensionCommercialId}
+                  onChange={(e) => setExtensionCommercialId(e.target.value)}
+                  className="flex-1 rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
+                >
+                  <option value="">—</option>
+                  {commerciaux.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.prenom} {c.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="rounded-lg bg-bg-elev-2 px-4 py-3 text-sm">

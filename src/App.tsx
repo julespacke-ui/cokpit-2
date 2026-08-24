@@ -11,6 +11,7 @@ import { PlanActionPage } from './pages/PlanAction/PlanActionPage'
 import { RessourcesPage } from './pages/Ressources/RessourcesPage'
 import { AgenceDetailAdmin } from './pages/Accueil/AgenceDetailAdmin'
 import { AuditPage } from './pages/Audit/AuditPage'
+import { RemunerationPage } from './pages/Remuneration/RemunerationPage'
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
             <Route element={<ProtectedRoute rolesAutorises={['admin', 'gerant']} />}>
               <Route element={<AppShell />}>
                 <Route path="/parametres" element={<ParametresPage />} />
+                <Route path="/remuneration" element={<RemunerationPage />} />
               </Route>
             </Route>
 

@@ -152,7 +152,49 @@ export interface Vente {
   type_transaction_autre: string | null
   /** 0, 1 ou 2 — une transaction peut générer jusqu'à deux avis (acheteur + vendeur). */
   nb_avis: number
+  /** Attribution multi-commerciaux — chaque étape peut être réalisée par une
+   * personne différente de celle qui saisit la fiche (cf. rémunération). */
+  rdv_commercial_id: string | null
+  mandat_commercial_id: string | null
+  reservation_commercial_id: string | null
+  livraison_commercial_id: string | null
+  extension_commercial_id: string | null
   created_at: string
+  updated_at: string
+}
+
+/** Les 4 étapes paramétrables (l'extension se calcule à part, à partir de
+ * extensions_garantie.commission_agence — non paramétrable). */
+export type TypeRemuneration = 'rdv' | 'mandat' | 'reservation' | 'livraison'
+
+export const LABELS_TYPE_REMUNERATION: Record<TypeRemuneration, string> = {
+  rdv: 'RDV pris',
+  mandat: 'Mandat rentré',
+  reservation: 'Véhicule réservé',
+  livraison: 'Véhicule livré',
+}
+
+export type ModeTaux = 'pourcentage' | 'prime_fixe'
+
+export interface TauxRemuneration {
+  mode: ModeTaux
+  valeur: number // % si pourcentage, € si prime_fixe
+}
+
+export type ConfigRemuneration = Partial<Record<TypeRemuneration, TauxRemuneration>>
+
+export interface TauxRemunerationAgence {
+  id: string
+  agence_id: string
+  config: ConfigRemuneration
+  updated_at: string
+}
+
+export interface TauxRemunerationCommercial {
+  id: string
+  commercial_id: string
+  /** Sous-ensemble surchargeant le taux agence — une clé absente retombe sur l'agence. */
+  config: ConfigRemuneration
   updated_at: string
 }
 

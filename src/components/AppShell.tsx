@@ -7,6 +7,7 @@ import {
   FolderOpen,
   Settings,
   ClipboardCheck,
+  Wallet,
   LogOut,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -34,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['admin', 'gerant', 'commercial'],
   },
   { to: '/ressources', label: 'Ressources', icon: FolderOpen, roles: ['admin', 'gerant', 'commercial'] },
+  { to: '/remuneration', label: 'Rémunération', labelCourt: 'Rému.', icon: Wallet, roles: ['admin', 'gerant'] },
   { to: '/parametres', label: 'Paramètres', icon: Settings, roles: ['admin', 'gerant'] },
   { to: '/audit', label: 'Audit', icon: ClipboardCheck, roles: ['admin'] },
 ]

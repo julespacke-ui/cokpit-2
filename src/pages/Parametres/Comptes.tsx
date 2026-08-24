@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
-import type { Agence, Profile, Role } from '../../types/database'
+import type { Agence, ConfigRemuneration, Profile, Role } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Toggle } from '../../components/ui/Toggle'
 import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
+import { ChampsTauxRemuneration } from '../../components/ui/ChampsTauxRemuneration'
 
 const ROLE_LABELS: Record<Role, string> = { admin: 'Admin', gerant: 'Gérant', commercial: 'Commercial' }
 
@@ -77,6 +78,57 @@ function ModifierCompte({
   )
 }
 
+function TauxCommercial({ profil, agenceId, onFermer }: { profil: Profile; agenceId: string; onFermer: () => void }) {
+  const [chargement, setChargement] = useState(true)
+  const [config, setConfig] = useState<ConfigRemuneration>({})
+  const [tauxAgence, setTauxAgence] = useState<ConfigRemuneration>({})
+  const [message, setMessage] = useState<string | null>(null)
+  const [enregistrement, setEnregistrement] = useState(false)
+
+  useEffect(() => {
+    setChargement(true)
+    Promise.all([
+      supabase.from('taux_remuneration_commercial').select('*').eq('commercial_id', profil.id).maybeSingle(),
+      supabase.from('taux_remuneration_agence').select('*').eq('agence_id', agenceId).maybeSingle(),
+    ]).then(([commercialRes, agenceRes]) => {
+      setConfig(commercialRes.data?.config ?? {})
+      setTauxAgence(agenceRes.data?.config ?? {})
+      setChargement(false)
+    })
+  }, [profil.id, agenceId])
+
+  async function enregistrer() {
+    setEnregistrement(true)
+    setMessage(null)
+    const { error } = await supabase
+      .from('taux_remuneration_commercial')
+      .upsert({ commercial_id: profil.id, config }, { onConflict: 'commercial_id' })
+    setEnregistrement(false)
+    setMessage(error ? `Erreur : ${error.message}` : 'Taux enregistrés.')
+  }
+
+  if (chargement) return <p className="mt-2 text-sm text-text-dim">Chargement…</p>
+
+  return (
+    <div className="mt-2 rounded-lg border border-line bg-bg-elev-2 p-3">
+      <p className="mb-3 text-sm text-text-dim">
+        Taux personnalisés pour {profil.prenom} {profil.nom} — active un interrupteur pour remplacer le taux de
+        l'agence sur ce type précis. Les types non activés suivent automatiquement le taux de l'agence.
+      </p>
+      <ChampsTauxRemuneration config={config} onChange={setConfig} tauxAgence={tauxAgence} />
+      {message && <p className="mt-3 text-sm text-text-dim">{message}</p>}
+      <div className="mt-4 flex gap-3">
+        <Button onClick={enregistrer} disabled={enregistrement}>
+          {enregistrement ? 'Enregistrement…' : 'Enregistrer'}
+        </Button>
+        <Button variant="secondary" onClick={onFermer}>
+          Fermer
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 function ReinitialiserMotDePasse({ profil, onFermer }: { profil: Profile; onFermer: () => void }) {
   const [motDePasse, setMotDePasse] = useState('')
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
@@ -136,6 +188,7 @@ export function Comptes({ agenceId, peutChoisirRole, agences }: ComptesProps) {
   const [formulaireOuvert, setFormulaireOuvert] = useState(false)
   const [resetOuvertId, setResetOuvertId] = useState<string | null>(null)
   const [modifOuvertId, setModifOuvertId] = useState<string | null>(null)
+  const [tauxOuvertId, setTauxOuvertId] = useState<string | null>(null)
 
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
@@ -222,6 +275,14 @@ export function Comptes({ agenceId, peutChoisirRole, agences }: ComptesProps) {
                   </Button>
                 )}
                 {p.role !== 'admin' && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setTauxOuvertId(tauxOuvertId === p.id ? null : p.id)}
+                  >
+                    Taux de rémunération
+                  </Button>
+                )}
+                {p.role !== 'admin' && (
                   <Toggle checked={p.actif} onChange={() => toggleActif(p)} label={`Actif : ${p.prenom}`} />
                 )}
               </div>
@@ -238,6 +299,9 @@ export function Comptes({ agenceId, peutChoisirRole, agences }: ComptesProps) {
               )}
               {resetOuvertId === p.id && (
                 <ReinitialiserMotDePasse profil={p} onFermer={() => setResetOuvertId(null)} />
+              )}
+              {tauxOuvertId === p.id && (
+                <TauxCommercial profil={p} agenceId={agenceId} onFermer={() => setTauxOuvertId(null)} />
               )}
             </div>
           )

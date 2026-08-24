@@ -5,7 +5,7 @@
 // composants qui les utilisent.
 // ============================================================================
 
-import type { SaisieHebdo, TrancheHonoraires } from '../types/database'
+import type { ConfigRemuneration, SaisieHebdo, TauxRemuneration, TrancheHonoraires, TypeRemuneration } from '../types/database'
 
 /**
  * Honoraires préconisés par le barème pour un prix de vente donné.
@@ -42,6 +42,49 @@ export function calculerPanierVente(params: {
   return (
     params.honorairesReels + (params.prixPackMer ?? 0) + (params.prixExtensionGarantie ?? 0) + totalServices
   )
+}
+
+// ============================================================================
+// Rémunération multi-commerciaux (attribution RDV/mandat/réservation/
+// livraison/extension — cf. migrations 0017 et 0018)
+// ============================================================================
+
+/**
+ * Base de calcul des parts RDV/mandat/réservation/livraison = honoraires
+ * réels + pack MER + services additionnels. Volontairement hors carte grise
+ * (reversée à l'ANTS) et hors extension de garantie (celle-ci a sa propre
+ * commission dédiée, cf. calculerPartExtension).
+ */
+export function calculerBaseRemuneration(params: {
+  honorairesReels: number
+  prixPackMer?: number
+  services: { prix: number }[]
+}): number {
+  const totalServices = params.services.reduce((somme, s) => somme + s.prix, 0)
+  return params.honorairesReels + (params.prixPackMer ?? 0) + totalServices
+}
+
+/** Taux appliqué à la base : montant fixe si prime_fixe, pourcentage de la base sinon. */
+export function calculerPartRemuneration(taux: TauxRemuneration, base: number): number {
+  return taux.mode === 'prime_fixe' ? taux.valeur : (base * taux.valeur) / 100
+}
+
+/** Part sur une extension de garantie vendue = 50 % de la commission agence définie sur la fiche extension. */
+export function calculerPartExtension(commissionAgence: number): number {
+  return commissionAgence * 0.5
+}
+
+/**
+ * Taux effectif pour un type donné : le taux personnalisé du commercial s'il
+ * existe pour ce type précis, sinon le taux par défaut de l'agence, sinon 0
+ * (agence pas encore configurée).
+ */
+export function tauxEffectif(
+  type: TypeRemuneration,
+  configAgence: ConfigRemuneration,
+  configCommercial: ConfigRemuneration | undefined,
+): TauxRemuneration {
+  return configCommercial?.[type] ?? configAgence[type] ?? { mode: 'pourcentage', valeur: 0 }
 }
 
 // ============================================================================

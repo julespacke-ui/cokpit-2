@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import type { BaremeHonoraires, ExtensionGarantie, PackMer } from '../../types/database'
+import type { BaremeHonoraires, ExtensionGarantie, PackMer, Profile } from '../../types/database'
 import { Button } from '../../components/ui/Button'
 import { Toast, useToast } from '../../components/ui/Toast'
 import { NouvelleVenteForm } from './NouvelleVenteForm'
@@ -13,6 +13,7 @@ export function VentesPage() {
   const [bareme, setBareme] = useState<BaremeHonoraires | null>(null)
   const [packs, setPacks] = useState<PackMer[]>([])
   const [extensions, setExtensions] = useState<ExtensionGarantie[]>([])
+  const [commerciaux, setCommerciaux] = useState<Profile[]>([])
   const [rafraichir, setRafraichir] = useState(0)
   const toast = useToast()
 
@@ -27,10 +28,18 @@ export function VentesPage() {
         .eq('agence_id', profile.agence_id)
         .eq('actif', true)
         .order('nom'),
-    ]).then(([baremeRes, packsRes, extensionsRes]) => {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('agence_id', profile.agence_id)
+        .in('role', ['gerant', 'commercial'])
+        .eq('actif', true)
+        .order('prenom'),
+    ]).then(([baremeRes, packsRes, extensionsRes, commerciauxRes]) => {
       setBareme(baremeRes.data)
       setPacks(packsRes.data ?? [])
       setExtensions(extensionsRes.data ?? [])
+      setCommerciaux(commerciauxRes.data ?? [])
     })
   }, [profile?.agence_id])
 
@@ -51,6 +60,7 @@ export function VentesPage() {
             bareme={bareme}
             packs={packs}
             extensions={extensions}
+            commerciaux={commerciaux}
             onCreated={() => {
               setFormulaireOuvert(false)
               setRafraichir((r) => r + 1)
