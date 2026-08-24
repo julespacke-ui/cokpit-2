@@ -31,14 +31,19 @@ function App() {
             <Route element={<ProtectedRoute rolesAutorises={['gerant', 'commercial']} />}>
               <Route element={<AppShell />}>
                 <Route path="/ma-semaine" element={<MaSemaine />} />
+              </Route>
+            </Route>
+
+            <Route element={<ProtectedRoute rolesAutorises={['admin', 'gerant', 'commercial']} />}>
+              <Route element={<AppShell />}>
                 <Route path="/ventes" element={<VentesPage />} />
+                <Route path="/remuneration" element={<RemunerationPage />} />
               </Route>
             </Route>
 
             <Route element={<ProtectedRoute rolesAutorises={['admin', 'gerant']} />}>
               <Route element={<AppShell />}>
                 <Route path="/parametres" element={<ParametresPage />} />
-                <Route path="/remuneration" element={<RemunerationPage />} />
               </Route>
             </Route>
 

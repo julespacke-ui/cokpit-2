@@ -26,7 +26,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Accueil', icon: Home, roles: ['admin', 'gerant', 'commercial'] },
   { to: '/ma-semaine', label: 'Ma semaine', icon: CalendarDays, roles: ['gerant', 'commercial'] },
-  { to: '/ventes', label: 'Ventes', icon: Car, roles: ['gerant', 'commercial'] },
+  { to: '/ventes', label: 'Ventes', icon: Car, roles: ['admin', 'gerant', 'commercial'] },
   {
     to: '/plan-action',
     label: "Plan d'action",
@@ -35,7 +35,13 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['admin', 'gerant', 'commercial'],
   },
   { to: '/ressources', label: 'Ressources', icon: FolderOpen, roles: ['admin', 'gerant', 'commercial'] },
-  { to: '/remuneration', label: 'Rémunération', labelCourt: 'Rému.', icon: Wallet, roles: ['admin', 'gerant'] },
+  {
+    to: '/remuneration',
+    label: 'Rémunération',
+    labelCourt: 'Rému.',
+    icon: Wallet,
+    roles: ['admin', 'gerant', 'commercial'],
+  },
   { to: '/parametres', label: 'Paramètres', icon: Settings, roles: ['admin', 'gerant'] },
   { to: '/audit', label: 'Audit', icon: ClipboardCheck, roles: ['admin'] },
 ]

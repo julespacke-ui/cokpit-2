@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import type { BaremeHonoraires, ExtensionGarantie, PackMer, Profile } from '../../types/database'
+import type { Agence, BaremeHonoraires, ExtensionGarantie, PackMer, Profile } from '../../types/database'
 import { Button } from '../../components/ui/Button'
 import { Toast, useToast } from '../../components/ui/Toast'
+import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
+import { agenceParDefaut } from '../../lib/agences'
 import { NouvelleVenteForm } from './NouvelleVenteForm'
 import { HistoriqueVentes } from './HistoriqueVentes'
 
 export function VentesPage() {
   const { profile } = useAuth()
+  const estAdmin = profile?.role === 'admin'
+
+  const [agences, setAgences] = useState<Agence[]>([])
+  const [agenceId, setAgenceId] = useState('')
   const [formulaireOuvert, setFormulaireOuvert] = useState(false)
   const [bareme, setBareme] = useState<BaremeHonoraires | null>(null)
   const [packs, setPacks] = useState<PackMer[]>([])
@@ -18,20 +24,35 @@ export function VentesPage() {
   const toast = useToast()
 
   useEffect(() => {
-    if (!profile?.agence_id) return
+    if (!estAdmin) {
+      setAgenceId(profile?.agence_id ?? '')
+      return
+    }
+    supabase
+      .from('agences')
+      .select('*')
+      .order('nom')
+      .then(({ data }) => {
+        setAgences(data ?? [])
+        setAgenceId((prev) => prev || agenceParDefaut(data ?? []))
+      })
+  }, [estAdmin, profile?.agence_id])
+
+  useEffect(() => {
+    if (!agenceId) return
     Promise.all([
-      supabase.from('baremes_honoraires').select('*').eq('agence_id', profile.agence_id).maybeSingle(),
-      supabase.from('packs_mer').select('*').eq('agence_id', profile.agence_id).eq('actif', true).order('nom'),
+      supabase.from('baremes_honoraires').select('*').eq('agence_id', agenceId).maybeSingle(),
+      supabase.from('packs_mer').select('*').eq('agence_id', agenceId).eq('actif', true).order('nom'),
       supabase
         .from('extensions_garantie')
         .select('*')
-        .eq('agence_id', profile.agence_id)
+        .eq('agence_id', agenceId)
         .eq('actif', true)
         .order('nom'),
       supabase
         .from('profiles')
         .select('*')
-        .eq('agence_id', profile.agence_id)
+        .eq('agence_id', agenceId)
         .in('role', ['gerant', 'commercial'])
         .eq('actif', true)
         .order('prenom'),
@@ -41,21 +62,26 @@ export function VentesPage() {
       setExtensions(extensionsRes.data ?? [])
       setCommerciaux(commerciauxRes.data ?? [])
     })
-  }, [profile?.agence_id])
+  }, [agenceId])
 
-  if (!profile?.agence_id) return null
+  if (!profile || !agenceId) return null
 
   return (
     <div className="p-4 md:p-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-heading text-2xl">Ventes</h2>
-        {!formulaireOuvert && <Button onClick={() => setFormulaireOuvert(true)}>+ Nouvelle vente</Button>}
+        <div className="flex items-center gap-3">
+          {estAdmin && <SelecteurAgence agences={agences} value={agenceId} onChange={setAgenceId} />}
+          {!estAdmin && !formulaireOuvert && (
+            <Button onClick={() => setFormulaireOuvert(true)}>+ Nouvelle vente</Button>
+          )}
+        </div>
       </div>
 
-      {formulaireOuvert && (
+      {!estAdmin && formulaireOuvert && (
         <div className="mb-6">
           <NouvelleVenteForm
-            agenceId={profile.agence_id}
+            agenceId={agenceId}
             commercialId={profile.id}
             bareme={bareme}
             packs={packs}
@@ -71,7 +97,7 @@ export function VentesPage() {
         </div>
       )}
 
-      <HistoriqueVentes agenceId={profile.agence_id} rafraichir={rafraichir} />
+      <HistoriqueVentes key={agenceId} agenceId={agenceId} rafraichir={rafraichir} />
 
       <Toast message={toast.message} cle={toast.cle} onFermer={toast.fermer} />
     </div>

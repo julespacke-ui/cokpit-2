@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { calculerBaseRemuneration, calculerPartExtension, calculerPartRemuneration, tauxEffectif } from '../../lib/calculs'
 import type { Agence, ConfigRemuneration, Profile, TypeRemuneration } from '../../types/database'
 import { LABELS_TYPE_REMUNERATION } from '../../types/database'
+import { Card } from '../../components/ui/Card'
 import { SelecteurAgence } from '../../components/ui/SelecteurAgence'
 import { SkeletonTableau } from '../../components/ui/Skeleton'
 import { PeriodeSelector, type PlagePeriode } from '../Accueil/PeriodeSelector'
@@ -29,15 +30,48 @@ function totalVide(): TotalCommercial {
   return { rdv: 0, mandat: 0, reservation: 0, livraison: 0, extension: 0, total: 0 }
 }
 
+/**
+ * Parts RDV/mandat/réservation/livraison d'une vente, chacune pour le
+ * commercial attribué sur ce champ précis (peut être une personne différente
+ * par champ — d'où le résolveur plutôt qu'un config unique pour la vente).
+ */
+function calculerPartsVente(
+  v: VenteRemuneration,
+  configAgence: ConfigRemuneration,
+  configCommercialPour: (commercialId: string) => ConfigRemuneration | undefined,
+) {
+  const base = calculerBaseRemuneration({
+    honorairesReels: v.honoraires_reels,
+    prixPackMer: v.pack_mer_prix_applique ?? undefined,
+    services: v.vente_services ?? [],
+  })
+
+  const attributions: [string | null, TypeRemuneration][] = [
+    [v.rdv_commercial_id, 'rdv'],
+    [v.mandat_commercial_id, 'mandat'],
+    [v.reservation_commercial_id, 'reservation'],
+    [v.livraison_commercial_id, 'livraison'],
+  ]
+
+  return attributions
+    .filter((a): a is [string, TypeRemuneration] => a[0] !== null)
+    .map(([commercialId, type]) => {
+      const taux = tauxEffectif(type, configAgence, configCommercialPour(commercialId))
+      return { commercialId, type, montant: calculerPartRemuneration(taux, base) }
+    })
+}
+
 export function RemunerationPage() {
   const { profile } = useAuth()
   const estAdmin = profile?.role === 'admin'
+  const estCommercial = profile?.role === 'commercial'
 
   const [agences, setAgences] = useState<Agence[]>([])
   const [agenceId, setAgenceId] = useState('')
   const [plage, setPlage] = useState<PlagePeriode | null>(null)
   const [profils, setProfils] = useState<Profile[]>([])
   const [totaux, setTotaux] = useState<Record<string, TotalCommercial>>({})
+  const [totalPersonnel, setTotalPersonnel] = useState<TotalCommercial>(totalVide())
   const [chargement, setChargement] = useState(true)
 
   useEffect(() => {
@@ -55,8 +89,59 @@ export function RemunerationPage() {
       })
   }, [estAdmin, profile?.agence_id])
 
+  // Vue commerciale : uniquement sa propre part, sur les ventes où il apparaît
+  // dans un des champs d'attribution — jamais les ventes/taux des collègues.
   useEffect(() => {
-    if (!agenceId || !plage) return
+    if (!estCommercial || !agenceId || !plage || !profile) return
+    setChargement(true)
+
+    Promise.all([
+      supabase.from('taux_remuneration_agence').select('*').eq('agence_id', agenceId).maybeSingle(),
+      supabase.from('taux_remuneration_commercial').select('*').eq('commercial_id', profile.id).maybeSingle(),
+      supabase
+        .from('ventes')
+        .select(
+          'honoraires_reels, pack_mer_prix_applique, vente_services(prix), rdv_commercial_id, mandat_commercial_id, reservation_commercial_id, livraison_commercial_id, extension_commercial_id, extensions_garantie(commission_agence)',
+        )
+        .eq('agence_id', agenceId)
+        .gte('date_vente', plage.du)
+        .lte('date_vente', plage.au)
+        .or(
+          [
+            `rdv_commercial_id.eq.${profile.id}`,
+            `mandat_commercial_id.eq.${profile.id}`,
+            `reservation_commercial_id.eq.${profile.id}`,
+            `livraison_commercial_id.eq.${profile.id}`,
+            `extension_commercial_id.eq.${profile.id}`,
+          ].join(','),
+        ),
+    ]).then(([agenceTauxRes, commercialTauxRes, ventesRes]) => {
+      const configAgence: ConfigRemuneration = agenceTauxRes.data?.config ?? {}
+      const configCommercial: ConfigRemuneration | undefined = commercialTauxRes.data?.config
+      const ventes = (ventesRes.data ?? []) as unknown as VenteRemuneration[]
+
+      const total = totalVide()
+      for (const v of ventes) {
+        for (const { commercialId, type, montant } of calculerPartsVente(v, configAgence, () => configCommercial)) {
+          if (commercialId !== profile.id) continue
+          total[type] += montant
+          total.total += montant
+        }
+        if (v.extension_commercial_id === profile.id && v.extensions_garantie) {
+          const part = calculerPartExtension(v.extensions_garantie.commission_agence)
+          total.extension += part
+          total.total += part
+        }
+      }
+
+      setTotalPersonnel(total)
+      setChargement(false)
+    })
+  }, [estCommercial, agenceId, plage, profile])
+
+  // Vue gérant/admin : le détail de toute l'équipe de l'agence.
+  useEffect(() => {
+    if (estCommercial || !agenceId || !plage) return
     setChargement(true)
 
     Promise.all([
@@ -94,29 +179,13 @@ export function RemunerationPage() {
           const totaux: Record<string, TotalCommercial> = {}
           for (const p of profils) totaux[p.id] = totalVide()
 
-          function ajouterPart(commercialId: string | null, type: TypeRemuneration, montant: number) {
-            if (!commercialId || !totaux[commercialId]) return
-            totaux[commercialId][type] += montant
-            totaux[commercialId].total += montant
-          }
-
           for (const v of ventes) {
-            const base = calculerBaseRemuneration({
-              honorairesReels: v.honoraires_reels,
-              prixPackMer: v.pack_mer_prix_applique ?? undefined,
-              services: v.vente_services ?? [],
-            })
-
-            const attributions: [string | null, TypeRemuneration][] = [
-              [v.rdv_commercial_id, 'rdv'],
-              [v.mandat_commercial_id, 'mandat'],
-              [v.reservation_commercial_id, 'reservation'],
-              [v.livraison_commercial_id, 'livraison'],
-            ]
-            for (const [commercialId, type] of attributions) {
-              if (!commercialId) continue
-              const taux = tauxEffectif(type, configAgence, configsCommercial.get(commercialId))
-              ajouterPart(commercialId, type, calculerPartRemuneration(taux, base))
+            for (const { commercialId, type, montant } of calculerPartsVente(v, configAgence, (id) =>
+              configsCommercial.get(id),
+            )) {
+              if (!totaux[commercialId]) continue
+              totaux[commercialId][type] += montant
+              totaux[commercialId].total += montant
             }
 
             if (v.extension_commercial_id && v.extensions_garantie && totaux[v.extension_commercial_id]) {
@@ -131,7 +200,7 @@ export function RemunerationPage() {
           setChargement(false)
         })
     })
-  }, [agenceId, plage])
+  }, [estCommercial, agenceId, plage])
 
   if (!profile) return null
 
@@ -147,7 +216,30 @@ export function RemunerationPage() {
       {!agenceId ? (
         <p className="text-text-dim">Aucune agence sélectionnée.</p>
       ) : chargement ? (
-        <SkeletonTableau lignes={5} />
+        <SkeletonTableau lignes={estCommercial ? 2 : 5} />
+      ) : estCommercial ? (
+        <Card className="max-w-lg">
+          <p className="mb-4 text-sm text-text-dim">
+            Ta part sur les ventes où tu es attribué (RDV, mandat, réservation, livraison, extension) sur la
+            période sélectionnée.
+          </p>
+          <div className="flex flex-col gap-2">
+            {ORDRE_TYPES.map((type) => (
+              <div key={type} className="flex items-center justify-between border-b border-line pb-2 text-sm">
+                <span className="text-text-dim">Part {LABELS_TYPE_REMUNERATION[type]}</span>
+                <span className="tabular-nums">{Math.round(totalPersonnel[type]).toLocaleString('fr-FR')} €</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between border-b border-line pb-2 text-sm">
+              <span className="text-text-dim">Part extension</span>
+              <span className="tabular-nums">{Math.round(totalPersonnel.extension).toLocaleString('fr-FR')} €</span>
+            </div>
+            <div className="flex items-center justify-between pt-1 text-base">
+              <span className="font-medium">Total</span>
+              <span className="font-medium tabular-nums">{Math.round(totalPersonnel.total).toLocaleString('fr-FR')} €</span>
+            </div>
+          </div>
+        </Card>
       ) : profils.length === 0 ? (
         <p className="text-text-dim">Aucun commercial pour l'instant.</p>
       ) : (

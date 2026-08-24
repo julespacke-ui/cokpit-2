@@ -57,7 +57,7 @@ const FORMAT_DATE = new Intl.DateTimeFormat('fr-FR')
 
 export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; rafraichir: number }) {
   const { profile } = useAuth()
-  const estGerant = profile?.role === 'gerant'
+  const voitToutesLesVentes = profile?.role === 'gerant' || profile?.role === 'admin'
 
   const [du, setDu] = useState(premierJourDuMois())
   const [au, setAu] = useState(aujourdHui())
@@ -73,7 +73,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
   const toast = useToast()
 
   useEffect(() => {
-    if (!estGerant) return
+    if (!voitToutesLesVentes) return
     supabase
       .from('profiles')
       .select('*')
@@ -82,7 +82,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
       .eq('actif', true)
       .order('prenom')
       .then(({ data }) => setCommerciaux(data ?? []))
-  }, [agenceId, estGerant])
+  }, [agenceId, voitToutesLesVentes])
 
   useEffect(() => {
     if (!profile) return
@@ -96,7 +96,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
       .lte('date_vente', au)
       .order('date_vente', { ascending: false })
 
-    if (!estGerant) {
+    if (!voitToutesLesVentes) {
       requete = requete.eq('commercial_id', profile.id)
     } else if (commercialId !== 'tous') {
       requete = requete.eq('commercial_id', commercialId)
@@ -125,7 +125,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
       setVentes(lignes)
       setChargement(false)
     })
-  }, [agenceId, du, au, commercialId, estGerant, profile, rafraichir, rafraichirLocal])
+  }, [agenceId, du, au, commercialId, voitToutesLesVentes, profile, rafraichir, rafraichirLocal])
 
   function ouvrirEdition(v: VenteLigne) {
     setSuppressionId(null)
@@ -181,7 +181,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
           <label className="mb-1.5 block text-sm text-text-dim">Au</label>
           <Input type="date" value={au} onChange={(e) => setAu(e.target.value)} />
         </div>
-        {estGerant && (
+        {voitToutesLesVentes && (
           <div>
             <label className="mb-1.5 block text-sm text-text-dim">Commercial</label>
             <select
@@ -221,7 +221,7 @@ export function HistoriqueVentes({ agenceId, rafraichir }: { agenceId: string; r
                   ) : (
                     <p className="text-sm text-text-dim">
                       {FORMAT_DATE.format(new Date(v.date_vente))}
-                      {estGerant && v.commercial && ` — ${v.commercial.prenom} ${v.commercial.nom}`}
+                      {voitToutesLesVentes && v.commercial && ` — ${v.commercial.prenom} ${v.commercial.nom}`}
                     </p>
                   )}
                 </div>
