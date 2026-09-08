@@ -12,6 +12,7 @@ import { HistoriqueVentes } from './HistoriqueVentes'
 export function VentesPage() {
   const { profile } = useAuth()
   const estAdmin = profile?.role === 'admin'
+  const estGerant = profile?.role === 'gerant'
 
   const [agences, setAgences] = useState<Agence[]>([])
   const [agenceId, setAgenceId] = useState('')
@@ -83,6 +84,7 @@ export function VentesPage() {
           <NouvelleVenteForm
             agenceId={agenceId}
             commercialId={profile.id}
+            peutChoisirCommercial={estGerant}
             bareme={bareme}
             packs={packs}
             extensions={extensions}

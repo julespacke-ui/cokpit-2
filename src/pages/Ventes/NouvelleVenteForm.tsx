@@ -64,13 +64,18 @@ export interface VenteExistante {
   reservation_commercial_id: string | null
   livraison_commercial_id: string | null
   extension_commercial_id: string | null
+  commercial_id: string
   vente_services: { libelle: string; prix: number }[]
 }
 
 interface NouvelleVenteFormProps {
   agenceId: string
-  /** Requis à la création (propriétaire de la vente) ; ignoré en édition. */
+  /** Commercial par défaut (l'utilisateur connecté) — utilisé tel quel si
+   * `peutChoisirCommercial` est faux, sinon pré-sélectionné mais modifiable. */
   commercialId?: string
+  /** Vrai pour un gérant/admin : peut créer/réattribuer une vente pour
+   * n'importe quel commercial de l'agence, pas seulement la sienne. */
+  peutChoisirCommercial: boolean
   bareme: BaremeHonoraires | null
   packs: PackMer[]
   extensions: ExtensionGarantie[]
@@ -85,6 +90,7 @@ interface NouvelleVenteFormProps {
 export function NouvelleVenteForm({
   agenceId,
   commercialId,
+  peutChoisirCommercial,
   bareme,
   packs,
   extensions,
@@ -93,6 +99,9 @@ export function NouvelleVenteForm({
   onSauvegarde,
   onCancel,
 }: NouvelleVenteFormProps) {
+  const [commercialSelectionne, setCommercialSelectionne] = useState(
+    venteExistante?.commercial_id ?? commercialId ?? '',
+  )
   const [dateVente, setDateVente] = useState(venteExistante?.date_vente ?? aujourdHui())
   const [vehicule, setVehicule] = useState(venteExistante?.vehicule ?? '')
   const [prixVente, setPrixVente] = useState<number | ''>(venteExistante?.prix_vente ?? '')
@@ -188,7 +197,7 @@ export function NouvelleVenteForm({
     e.preventDefault()
     setErreur(null)
 
-    if (!vehicule || prixVente === '' || honorairesReels === '' || !origineVente) {
+    if (!commercialSelectionne || !vehicule || prixVente === '' || honorairesReels === '' || !origineVente) {
       setErreur('Merci de remplir tous les champs obligatoires.')
       return
     }
@@ -196,6 +205,7 @@ export function NouvelleVenteForm({
     setEnvoiEnCours(true)
 
     const champs = {
+      commercial_id: commercialSelectionne,
       date_vente: dateVente,
       vehicule,
       prix_vente: Number(prixVente),
@@ -241,7 +251,7 @@ export function NouvelleVenteForm({
     } else {
       const { data: vente, error } = await supabase
         .from('ventes')
-        .insert({ commercial_id: commercialId!, agence_id: agenceId, ...champs })
+        .insert({ agence_id: agenceId, ...champs })
         .select('id')
         .single()
 
@@ -271,6 +281,25 @@ export function NouvelleVenteForm({
   return (
     <Card className="max-w-2xl">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {peutChoisirCommercial && (
+          <div>
+            <label className="mb-1.5 block text-sm text-text-dim">Commercial</label>
+            <select
+              value={commercialSelectionne}
+              onChange={(e) => setCommercialSelectionne(e.target.value)}
+              className="w-full rounded-lg border border-line bg-bg-elev-2 px-4 py-3 text-text"
+              required
+            >
+              <option value="">Sélectionner…</option>
+              {commerciaux.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.prenom} {c.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-3">
           <div className="flex-1">
             <label className="mb-1.5 block text-sm text-text-dim">Date de vente</label>

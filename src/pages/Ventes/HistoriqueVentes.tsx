@@ -31,6 +31,7 @@ const TYPE_TRANSACTION_LABELS: Record<string, string> = {
 
 interface VenteLigne {
   id: string
+  commercial_id: string
   date_vente: string
   vehicule: string
   prix_vente: number
@@ -126,6 +127,7 @@ export function HistoriqueVentes({ agenceId, rafraichir, bareme, packs, extensio
     requete.then(({ data }) => {
       const lignes: VenteLigne[] = (data ?? []).map((v) => ({
         id: v.id,
+        commercial_id: v.commercial_id,
         date_vente: v.date_vente,
         vehicule: v.vehicule,
         prix_vente: v.prix_vente,
@@ -215,6 +217,7 @@ export function HistoriqueVentes({ agenceId, rafraichir, bareme, packs, extensio
               <NouvelleVenteForm
                 key={v.id}
                 agenceId={agenceId}
+                peutChoisirCommercial={voitToutesLesVentes}
                 bareme={bareme}
                 packs={packs}
                 extensions={extensions}
