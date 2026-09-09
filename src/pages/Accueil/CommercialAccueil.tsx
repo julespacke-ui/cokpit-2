@@ -34,6 +34,7 @@ const CIBLES_LABELS: Record<string, { label: string; unite?: string }> = {
 
 export function CommercialAccueil({ profile }: { profile: Profile }) {
   const [cibles, setCibles] = useState<Record<string, number>>({})
+  const [sourceObjectif, setSourceObjectif] = useState<'personnel' | 'agence' | null>(null)
   const [valeursMois, setValeursMois] = useState<Record<string, number>>({})
   const [chargementObjectifs, setChargementObjectifs] = useState(true)
 
@@ -89,6 +90,7 @@ export function CommercialAccueil({ profile }: { profile: Profile }) {
     ]).then(([objectifPerso, objectifAgence, ventesRes, saisiesRes]) => {
       const objectif = (objectifPerso.data ?? objectifAgence.data) as Objectif | null
       setCibles((objectif?.cibles as Record<string, number>) ?? {})
+      setSourceObjectif(objectifPerso.data ? 'personnel' : objectifAgence.data ? 'agence' : null)
 
       const ventes = ventesRes.data ?? []
       const saisies = (saisiesRes.data ?? []) as SaisieHebdo[]
@@ -172,16 +174,23 @@ export function CommercialAccueil({ profile }: { profile: Profile }) {
         ) : Object.keys(cibles).length === 0 ? (
           <p className="text-text-dim">Aucun objectif défini pour ce mois.</p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {Object.entries(cibles).map(([cle, cible]) => (
-              <JaugeObjectif
-                key={cle}
-                label={CIBLES_LABELS[cle]?.label ?? cle}
-                valeur={valeursMois[cle] ?? 0}
-                cible={cible}
-                unite={CIBLES_LABELS[cle]?.unite}
-              />
-            ))}
+          <div>
+            {sourceObjectif === 'agence' && (
+              <p className="mb-3 text-sm text-text-dim">
+                Aucun objectif personnel programmé — voici les objectifs de l'agence.
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {Object.entries(cibles).map(([cle, cible]) => (
+                <JaugeObjectif
+                  key={cle}
+                  label={CIBLES_LABELS[cle]?.label ?? cle}
+                  valeur={valeursMois[cle] ?? 0}
+                  cible={cible}
+                  unite={CIBLES_LABELS[cle]?.unite}
+                />
+              ))}
+            </div>
           </div>
         )}
       </section>
