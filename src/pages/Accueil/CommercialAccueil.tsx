@@ -54,13 +54,25 @@ export function CommercialAccueil({ profile }: { profile: Profile }) {
     setChargementObjectifs(true)
 
     Promise.all([
-      supabase.from('objectifs').select('*').eq('commercial_id', profile.id).eq('periode', debutMois).maybeSingle(),
+      // .lte + order + limit(1) plutôt que .eq('periode', debutMois) : un
+      // objectif reste en vigueur d'un mois sur l'autre tant qu'aucune ligne
+      // plus récente n'a été saisie (reconduction automatique).
+      supabase
+        .from('objectifs')
+        .select('*')
+        .eq('commercial_id', profile.id)
+        .lte('periode', debutMois)
+        .order('periode', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
       supabase
         .from('objectifs')
         .select('*')
         .eq('agence_id', profile.agence_id)
         .is('commercial_id', null)
-        .eq('periode', debutMois)
+        .lte('periode', debutMois)
+        .order('periode', { ascending: false })
+        .limit(1)
         .maybeSingle(),
       supabase
         .from('ventes')

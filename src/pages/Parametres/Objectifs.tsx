@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { objectifEnVigueur } from '../../lib/calculs'
 import type { Objectif, Profile } from '../../types/database'
 import { Card } from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -32,6 +33,12 @@ const CHAMPS: { cle: keyof Cibles; label: string }[] = [
 function moisActuelISO() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+const FORMAT_MOIS = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
+
+function libelleMois(periode: string): string {
+  return FORMAT_MOIS.format(new Date(`${periode}T00:00:00`))
 }
 
 async function upsertObjectif(agenceId: string, commercialId: string | null, periode: string, cibles: Cibles) {
@@ -71,8 +78,10 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
   const [mois, setMois] = useState(moisActuelISO())
   const [chargement, setChargement] = useState(true)
   const [ciblesAgence, setCiblesAgence] = useState<Cibles>({})
+  const [periodeSourceAgence, setPeriodeSourceAgence] = useState<string | null>(null)
   const [membresEquipe, setMembresEquipe] = useState<Profile[]>([])
   const [ciblesParCommercial, setCiblesParCommercial] = useState<Record<string, Cibles>>({})
+  const [periodeSourceParCommercial, setPeriodeSourceParCommercial] = useState<Record<string, string>>({})
   const [commercialOuvert, setCommercialOuvert] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [enregistrement, setEnregistrement] = useState(false)
@@ -88,7 +97,16 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
     setChargement(true)
     setMessage(null)
     Promise.all([
-      supabase.from('objectifs').select('*').eq('agence_id', agenceId).eq('periode', periode),
+      // .lte plutôt que .eq('periode', periode) : un objectif reste en
+      // vigueur d'un mois sur l'autre tant qu'aucune ligne plus récente n'a
+      // été saisie (reconduction automatique) — on affiche donc la ligne qui
+      // s'appliquerait réellement à ce mois, même si elle date d'avant.
+      supabase
+        .from('objectifs')
+        .select('*')
+        .eq('agence_id', agenceId)
+        .lte('periode', periode)
+        .order('periode', { ascending: false }),
       supabase
         .from('profiles')
         .select('*')
@@ -99,14 +117,28 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
         .order('prenom'),
     ]).then(([objectifsRes, membresRes]) => {
       const objectifs = (objectifsRes.data ?? []) as Objectif[]
-      const objectifAgence = objectifs.find((o) => o.commercial_id === null)
+      const objectifAgence = objectifEnVigueur(
+        objectifs.filter((o) => o.commercial_id === null),
+        periode,
+      )
       setCiblesAgence((objectifAgence?.cibles as Cibles) ?? {})
+      setPeriodeSourceAgence(objectifAgence?.periode ?? null)
 
       const parCommercial: Record<string, Cibles> = {}
-      for (const o of objectifs) {
-        if (o.commercial_id) parCommercial[o.commercial_id] = o.cibles as Cibles
+      const periodeSourcePar: Record<string, string> = {}
+      const commerciaux = new Set(objectifs.filter((o) => o.commercial_id).map((o) => o.commercial_id as string))
+      for (const commercialId of commerciaux) {
+        const objectifCommercial = objectifEnVigueur(
+          objectifs.filter((o) => o.commercial_id === commercialId),
+          periode,
+        )
+        if (objectifCommercial) {
+          parCommercial[commercialId] = objectifCommercial.cibles as Cibles
+          periodeSourcePar[commercialId] = objectifCommercial.periode
+        }
       }
       setCiblesParCommercial(parCommercial)
+      setPeriodeSourceParCommercial(periodeSourcePar)
       setMembresEquipe(membresRes.data ?? [])
       setChargement(false)
     })
@@ -198,7 +230,14 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
       </div>
 
       <Card>
-        <h3 className="mb-4 font-heading text-lg">Objectifs agence</h3>
+        <h3 className="mb-1 font-heading text-lg">Objectifs agence</h3>
+        <p className="mb-4 text-sm text-text-dim">
+          {periodeSourceAgence === null
+            ? "Aucun objectif défini pour ce mois ni avant."
+            : periodeSourceAgence === periode
+              ? 'Défini pour ce mois précisément.'
+              : `Reconduit depuis ${libelleMois(periodeSourceAgence)} — enregistrer crée une valeur propre à ce mois, reconduite à son tour pour les mois suivants.`}
+        </p>
         <CiblesForm cibles={ciblesAgence} onChange={setCiblesAgence} />
         <Button onClick={enregistrerAgence} disabled={enregistrement} className="mt-4">
           Enregistrer
@@ -224,6 +263,13 @@ export function Objectifs({ agenceId }: { agenceId: string }) {
               </button>
               {commercialOuvert === c.id && (
                 <div className="mt-3">
+                  <p className="mb-3 text-sm text-text-dim">
+                    {!periodeSourceParCommercial[c.id]
+                      ? "Aucun objectif individuel défini pour ce mois ni avant — suit l'objectif agence."
+                      : periodeSourceParCommercial[c.id] === periode
+                        ? 'Défini pour ce mois précisément.'
+                        : `Reconduit depuis ${libelleMois(periodeSourceParCommercial[c.id])} — enregistrer crée une valeur propre à ce mois, reconduite à son tour pour les mois suivants.`}
+                  </p>
                   <CiblesForm
                     cibles={ciblesParCommercial[c.id] ?? {}}
                     onChange={(cibles) => setCiblesParCommercial((prev) => ({ ...prev, [c.id]: cibles }))}

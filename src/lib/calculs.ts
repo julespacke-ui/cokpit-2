@@ -258,6 +258,37 @@ export function agregerSaisies(saisies: SaisieHebdo[]): AgregatSaisies {
 }
 
 // ============================================================================
+// Objectifs — reconduction automatique d'un mois sur l'autre
+// ============================================================================
+
+/**
+ * Ligne d'objectif "en vigueur" à un mois donné, parmi un ensemble de lignes
+ * d'un même périmètre (même agence, ou même commercial) : la plus récente
+ * définie à cette date ou avant. Fait tenir la reconduction automatique sans
+ * dupliquer de ligne en base — rien ne change tant qu'aucune ligne plus
+ * récente n'existe pour ce périmètre.
+ */
+export function objectifEnVigueur<T extends { periode: string }>(lignes: T[], mois: string): T | undefined {
+  let meilleure: T | undefined
+  for (const ligne of lignes) {
+    if (ligne.periode <= mois && (!meilleure || ligne.periode > meilleure.periode)) meilleure = ligne
+  }
+  return meilleure
+}
+
+/** Premiers jours de mois (YYYY-MM-01) de `debut` à `fin` inclus, un par mois calendaire couvert. */
+export function moisDeLaPeriode(debut: string, fin: string): string[] {
+  const mois: string[] = []
+  const curseur = new Date(`${debut}T00:00:00`)
+  const limite = new Date(`${fin}T00:00:00`)
+  while (curseur <= limite) {
+    mois.push(`${curseur.getFullYear()}-${String(curseur.getMonth() + 1).padStart(2, '0')}-01`)
+    curseur.setMonth(curseur.getMonth() + 1)
+  }
+  return mois
+}
+
+// ============================================================================
 // Suivi de remplissage hebdomadaire (alertes de non-remplissage)
 // ============================================================================
 

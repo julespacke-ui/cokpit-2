@@ -7,6 +7,8 @@ import {
   calculerPanierVente,
   chiffreAffaires,
   honorairesMoyens,
+  moisDeLaPeriode,
+  objectifEnVigueur,
   panierMoyen,
   tauxRotation,
 } from '../../lib/calculs'
@@ -83,12 +85,11 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
         .select('commercial_id, agence_id, semaine, stock_total')
         .lt('semaine', du)
         .order('semaine', { ascending: false }),
-      supabase
-        .from('objectifs')
-        .select('*')
-        .is('commercial_id', null)
-        .gte('periode', moisDebut)
-        .lte('periode', moisFin),
+      // Pas de .gte(moisDebut) : la reconduction automatique peut faire
+      // remonter la ligne en vigueur à un mois bien antérieur au début de la
+      // période affichée (ex. objectif saisi une fois en janvier, jamais
+      // retouché depuis).
+      supabase.from('objectifs').select('*').is('commercial_id', null).lte('periode', moisFin),
     ]).then(([agencesRes, ventesRes, saisiesRes, stockRes, objectifsRes]) => {
       const agences = agencesRes.data ?? []
       const ventes = (ventesRes.data ?? []) as unknown as VenteAvecRelations[]
@@ -123,12 +124,15 @@ export function BenchmarkAgences({ du, au }: BenchmarkAgencesProps) {
         const totalHonoraires = ventesAgence.reduce((somme, v) => somme + v.honoraires_reels, 0)
         const mandats = agregat.mandatsRentres
 
-        // Cumul des cibles agence sur tous les mois couverts par la période.
-        const cibles = objectifs
-          .filter((o) => o.agence_id === agence.id)
+        // Cumul des cibles agence sur tous les mois couverts par la période —
+        // chaque mois retombe sur la ligne en vigueur (reconduction
+        // automatique) avant d'être additionné aux autres.
+        const objectifsAgence = objectifs.filter((o) => o.agence_id === agence.id)
+        const cibles = moisDeLaPeriode(moisDebut, moisFin)
+          .map((mois) => objectifEnVigueur(objectifsAgence, mois)?.cibles as Cibles | undefined)
           .reduce<Required<Cibles> & { configure: boolean }>(
-            (acc, o) => {
-              const c = o.cibles as Cibles
+            (acc, c) => {
+              if (!c) return acc
               if (c.ventes !== undefined) {
                 acc.ventes += c.ventes
                 acc.configure = true
