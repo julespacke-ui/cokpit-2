@@ -8,14 +8,27 @@ import {
   panierMoyen,
   type AgregatSaisies,
 } from '../../lib/calculs'
-import type { SaisieHebdo } from '../../types/database'
+import { calculerPeriode, toISODate } from '../../lib/periodes'
+import type { Objectif, SaisieHebdo } from '../../types/database'
 import { IndicateursKpi } from './IndicateursKpi'
 import { ClassementAgence } from './ClassementAgence'
 import { CamembertCA } from './CamembertCA'
+import { JaugeObjectif } from './JaugeObjectif'
 import { PeriodeSelector, type PlagePeriode } from './PeriodeSelector'
 import { SuiviRemplissage } from './SuiviRemplissage'
 import { CompteurAnime } from '../../components/ui/CompteurAnime'
 import { SkeletonCarte, SkeletonTableau } from '../../components/ui/Skeleton'
+
+const CIBLES_LABELS: Record<string, { label: string; unite?: string }> = {
+  ventes: { label: 'Ventes' },
+  ca_honoraires: { label: 'CA honoraires', unite: ' €' },
+  rdv_semaine: { label: 'RDV / semaine' },
+  mandats: { label: 'Mandats' },
+  videos: { label: 'Vidéos' },
+  avis: { label: 'Avis' },
+  extensions_garantie: { label: 'Extensions garantie' },
+  prospections: { label: 'Prospections extérieures' },
+}
 
 interface VenteAvecRelations {
   id: string
@@ -62,6 +75,67 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId, onClickCommer
   const [paniers, setPaniers] = useState<number[]>([])
   const [stockDebutPeriode, setStockDebutPeriode] = useState(0)
   const [chargement, setChargement] = useState(true)
+
+  const [ciblesAgence, setCiblesAgence] = useState<Record<string, number>>({})
+  const [valeursMoisAgence, setValeursMoisAgence] = useState<Record<string, number>>({})
+  const [chargementObjectifs, setChargementObjectifs] = useState(true)
+
+  // Objectifs agence : toujours le mois calendaire en cours, indépendant du
+  // sélecteur de période utilisé pour le reste de la page (même convention
+  // que "Objectifs du mois" sur la vue commerciale).
+  useEffect(() => {
+    const periodeMois = calculerPeriode('mois', new Date())
+    const debutMois = toISODate(periodeMois.debut)
+    const finMois = toISODate(periodeMois.fin)
+
+    setChargementObjectifs(true)
+
+    Promise.all([
+      // .lte + order + limit(1) plutôt que .eq('periode', debutMois) :
+      // reconduction automatique tant qu'aucune ligne plus récente n'existe.
+      supabase
+        .from('objectifs')
+        .select('*')
+        .eq('agence_id', agenceId)
+        .is('commercial_id', null)
+        .lte('periode', debutMois)
+        .order('periode', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('ventes')
+        .select('honoraires_reels, extension_garantie_id')
+        .eq('agence_id', agenceId)
+        .gte('date_vente', debutMois)
+        .lte('date_vente', finMois),
+      supabase
+        .from('saisies_hebdo')
+        .select('*')
+        .eq('agence_id', agenceId)
+        .gte('semaine', debutMois)
+        .lte('semaine', finMois),
+    ]).then(([objectifRes, ventesRes, saisiesRes]) => {
+      const objectif = objectifRes.data as Objectif | null
+      setCiblesAgence((objectif?.cibles as Record<string, number>) ?? {})
+
+      const ventes = ventesRes.data ?? []
+      const saisies = (saisiesRes.data ?? []) as SaisieHebdo[]
+      const agregat = agregerSaisies(saisies)
+      const semainesRenseignees = new Set(saisies.map((s) => s.semaine)).size
+
+      setValeursMoisAgence({
+        ventes: ventes.length,
+        ca_honoraires: ventes.reduce((s, v) => s + v.honoraires_reels, 0),
+        mandats: agregat.mandatsRentres,
+        videos: agregat.videosPostees,
+        rdv_semaine: semainesRenseignees > 0 ? agregat.rdvVenus / semainesRenseignees : 0,
+        avis: agregat.nbAvisRecus,
+        prospections: agregat.prospectionsExterieures,
+        extensions_garantie: ventes.filter((v) => v.extension_garantie_id !== null).length,
+      })
+      setChargementObjectifs(false)
+    })
+  }, [agenceId])
 
   useEffect(() => {
     if (!plage) return
@@ -140,6 +214,31 @@ export function TableauBordAgence({ agenceId, utilisateurActuelId, onClickCommer
             <StatMiseEnAvant label="Chiffre d'affaires TTC" valeur={chiffreAffaires(paniers)} unite=" €" />
             <StatMiseEnAvant label="Panier moyen TTC" valeur={panierMoyen(paniers)} unite=" €" />
             <StatMiseEnAvant label="Honoraires moyens" valeur={honorairesMoyens(ventes)} unite=" €" />
+          </section>
+
+          <section className="mb-8">
+            <h3 className="mb-4 font-heading text-lg">Objectifs agence — mois en cours</h3>
+            {chargementObjectifs ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <SkeletonCarte key={i} />
+                ))}
+              </div>
+            ) : Object.keys(ciblesAgence).length === 0 ? (
+              <p className="text-text-dim">Aucun objectif agence défini.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {Object.entries(ciblesAgence).map(([cle, cible]) => (
+                  <JaugeObjectif
+                    key={cle}
+                    label={CIBLES_LABELS[cle]?.label ?? cle}
+                    valeur={valeursMoisAgence[cle] ?? 0}
+                    cible={cible}
+                    unite={CIBLES_LABELS[cle]?.unite}
+                  />
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="mb-8">
