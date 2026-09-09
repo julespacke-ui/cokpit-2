@@ -11,6 +11,26 @@ import { ChampsTauxRemuneration } from '../../components/ui/ChampsTauxRemunerati
 
 const ROLE_LABELS: Record<Role, string> = { admin: 'Admin', gerant: 'Gérant', commercial: 'Commercial' }
 
+/**
+ * Quand une Edge Function répond en non-2xx, supabase-js jette une erreur
+ * dont `.message` est un texte générique fixe ("Edge Function returned a
+ * non-2xx status code") — le vrai message métier ({error: "..."}) est dans
+ * le corps de la Response accessible via `.context`. Sans ça, l'utilisateur
+ * ne voit jamais la vraie raison de l'échec (droits, email déjà utilisé…).
+ */
+async function messageErreurFonction(error: unknown): Promise<string | undefined> {
+  const contexte = (error as { context?: unknown })?.context
+  if (contexte instanceof Response) {
+    try {
+      const corps = await contexte.clone().json()
+      if (typeof corps?.error === 'string') return corps.error
+    } catch {
+      // Corps non JSON (ou déjà consommé) : on retombe sur error.message.
+    }
+  }
+  return error instanceof Error ? error.message : undefined
+}
+
 interface ComptesProps {
   agenceId: string
   peutChoisirRole: boolean
@@ -144,7 +164,7 @@ function ReinitialiserMotDePasse({ profil, onFermer }: { profil: Profile; onFerm
     )
     setEnvoiEnCours(false)
     if (error || data?.error) {
-      setErreur(data?.error ?? error?.message ?? 'Erreur lors de la réinitialisation.')
+      setErreur(data?.error ?? (await messageErreurFonction(error)) ?? 'Erreur lors de la réinitialisation.')
       return
     }
     setReussi(true)
@@ -230,7 +250,7 @@ export function Comptes({ agenceId, peutChoisirRole, agences }: ComptesProps) {
     setEnvoiEnCours(false)
 
     if (error || data?.error) {
-      setErreur(data?.error ?? error?.message ?? 'Erreur lors de la création du compte.')
+      setErreur(data?.error ?? (await messageErreurFonction(error)) ?? 'Erreur lors de la création du compte.')
       return
     }
 
